@@ -436,6 +436,93 @@ body {
   color: var(--danger);
 }
 
+/* === Analysis Cards === */
+.analysis-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.analysis-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.analysis-result {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.ask-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ask-input-row .input {
+  flex: 1;
+}
+
+/* === Zombie Customer === */
+.customer-card.zombie {
+  border-color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.stage-badge.stage-zombie {
+  background: rgba(153, 153, 153, 0.15);
+  color: var(--text-muted);
+}
+
+.zombie-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+.zombie-tag {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(153, 153, 153, 0.15);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.zombie-reason {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* === Quotation Result === */
+.quotation-result {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
 /* === Follow-up Section === */
 .followup-section {
   margin-top: 24px;

@@ -7,7 +7,9 @@ import {
   deleteCustomer,
   getFollowUps,
   addFollowUp,
+  getAllChunks,
 } from '../db';
+import { generateQuotation } from '../utils/analysis';
 
 const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置'];
 const COUNTRIES = [
@@ -34,6 +36,8 @@ export default function CustomerDetail() {
   const [newFollowUp, setNewFollowUp] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quotation, setQuotation] = useState('');
 
   useEffect(() => {
     if (!isNew) {
@@ -82,6 +86,27 @@ export default function CustomerDetail() {
     if (!window.confirm('确定删除此客户及所有跟进记录？')) return;
     await deleteCustomer(Number(id));
     navigate('/customers');
+  };
+
+  const handleGenerateQuote = async () => {
+    const apiKey = localStorage.getItem('aiApiKey');
+    const providerId = localStorage.getItem('aiProvider') || 'claude';
+    if (!apiKey) { alert('请先在设置页配置 AI API Key'); return; }
+
+    setQuoteLoading(true);
+    setQuotation('');
+    try {
+      const chunks = await getAllChunks();
+      if (chunks.length === 0) {
+        setQuotation('提示：暂未上传产品文档，将生成报价单框架。建议先上传产品 PDF 以获得更准确的报价。\n\n');
+      }
+      const result = await generateQuotation(form, chunks, apiKey, providerId);
+      setQuotation((prev) => prev + result);
+    } catch (err) {
+      setQuotation(`生成失败：${err.message}`);
+    } finally {
+      setQuoteLoading(false);
+    }
   };
 
   const updateField = (field, value) => setForm({ ...form, [field]: value });
@@ -200,6 +225,22 @@ export default function CustomerDetail() {
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+      )}
+
+      {!isNew && (
+        <section className="followup-section">
+          <h3>报价单生成</h3>
+          <button
+            className="btn btn-primary btn-full"
+            onClick={handleGenerateQuote}
+            disabled={quoteLoading}
+          >
+            {quoteLoading ? 'AI 生成中...' : '一键生成报价单'}
+          </button>
+          {quotation && (
+            <div className="quotation-result">{quotation}</div>
           )}
         </section>
       )}

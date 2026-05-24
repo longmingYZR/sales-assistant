@@ -90,6 +90,11 @@ export async function addFollowUp(followUp) {
   await tx.done;
 }
 
+export async function getAllFollowUps() {
+  const db = await getDB();
+  return db.getAll('followUps');
+}
+
 export async function getLastFollowUpDate(customerId) {
   const db = await getDB();
   const all = await db.getAllFromIndex('followUps', 'customerId', customerId);
