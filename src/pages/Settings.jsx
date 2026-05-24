@@ -1,22 +1,33 @@
 import { useState, useEffect } from 'react';
 import { getAllDocuments, deleteDocument } from '../db';
+import { getProviders } from '../utils/ai';
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState('');
+  const [provider, setProvider] = useState('claude');
   const [remindDays, setRemindDays] = useState(5);
   const [docs, setDocs] = useState([]);
   const [saved, setSaved] = useState(false);
 
+  const providers = getProviders();
+  const currentProvider = providers.find((p) => p.id === provider) || providers[0];
+
   useEffect(() => {
-    setApiKey(localStorage.getItem('claudeApiKey') || '');
+    setApiKey(localStorage.getItem('aiApiKey') || '');
+    setProvider(localStorage.getItem('aiProvider') || 'claude');
     setRemindDays(Number(localStorage.getItem('remindDays')) || 5);
     getAllDocuments().then(setDocs);
   }, []);
 
   const saveApiKey = () => {
-    localStorage.setItem('claudeApiKey', apiKey.trim());
+    localStorage.setItem('aiApiKey', apiKey.trim());
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const saveProvider = (val) => {
+    setProvider(val);
+    localStorage.setItem('aiProvider', val);
   };
 
   const saveRemindDays = (val) => {
@@ -35,7 +46,20 @@ export default function Settings() {
       <h2 className="page-title">设置</h2>
 
       <section className="settings-section">
-        <h3>Claude API Key</h3>
+        <h3>AI 提供商</h3>
+        <select
+          className="select"
+          value={provider}
+          onChange={(e) => saveProvider(e.target.value)}
+        >
+          {providers.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </section>
+
+      <section className="settings-section">
+        <h3>{currentProvider.name} API Key</h3>
         <div className="input-row">
           <input
             type="password"
@@ -43,7 +67,7 @@ export default function Settings() {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             onBlur={saveApiKey}
-            placeholder="sk-ant-..."
+            placeholder={currentProvider.keyPlaceholder}
           />
         </div>
         {saved && <p className="hint success">已保存</p>}

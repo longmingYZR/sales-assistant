@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDocument, getAllChunks } from '../db';
-import { askClaude } from '../utils/claude';
+import { getDocument } from '../db';
+import { askAI } from '../utils/ai';
 
 export default function ProductChat() {
   const { id } = useParams();
@@ -34,12 +34,12 @@ export default function ProductChat() {
     const q = input.trim();
     if (!q || loading) return;
 
-    const apiKey = localStorage.getItem('claudeApiKey');
+    const apiKey = localStorage.getItem('aiApiKey');
     if (!apiKey) {
       setMessages((prev) => [
         ...prev,
         { role: 'user', text: q },
-        { role: 'assistant', text: '请先在设置页配置 Claude API Key' },
+        { role: 'assistant', text: '请先在设置页配置 AI API Key' },
       ]);
       setInput('');
       return;
@@ -51,11 +51,12 @@ export default function ProductChat() {
     setLoading(true);
 
     try {
+      const providerId = localStorage.getItem('aiProvider') || 'claude';
       const chunks = doc.chunks.map((c) => ({
         ...c,
         fileName: doc.fileName,
       }));
-      const answer = await askClaude(q, chunks, apiKey);
+      const answer = await askAI(q, chunks, apiKey, providerId);
       setMessages((prev) => [...prev, { role: 'assistant', text: answer }]);
     } catch (err) {
       setMessages((prev) => [
