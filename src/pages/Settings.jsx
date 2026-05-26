@@ -9,6 +9,7 @@ export default function Settings() {
   const [intervals, setIntervals] = useState({});
   const [docs, setDocs] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [showIntervals, setShowIntervals] = useState(false);
 
   const providers = getProviders();
   const currentProvider = providers.find((p) => p.id === provider) || providers[0];
@@ -82,22 +83,29 @@ export default function Settings() {
       </section>
 
       <section className="settings-section">
-        <h3>跟进提醒设置</h3>
-        <p className="hint">每种跟进类型的超时提醒间隔（超过此天数未动作将在看板提醒）</p>
-        {Object.entries(FOLLOWUP_TYPES).map(([typeId, info]) => (
-          <div className="input-row interval-row" key={typeId}>
-            <label className="interval-label">{info.label}</label>
-            <input
-              type="number"
-              className="input short"
-              value={intervals[typeId] ?? info.defaultInterval}
-              onChange={(e) => handleIntervalChange(typeId, e.target.value)}
-              min={1}
-              max={90}
-            />
-            <span className="hint">天</span>
+        <div className="collapse-header" onClick={() => setShowIntervals(!showIntervals)}>
+          <h3 style={{ marginBottom: 0 }}>跟进提醒设置</h3>
+          <span className={`collapse-arrow ${showIntervals ? 'open' : ''}`}>▶</span>
+        </div>
+        {showIntervals && (
+          <div className="collapse-body" style={{ marginTop: 10 }}>
+            <p className="hint">每种跟进类型的超时提醒间隔（超过此天数未动作将在看板提醒）</p>
+            {Object.entries(FOLLOWUP_TYPES).map(([typeId, info]) => (
+              <div className="input-row interval-row" key={typeId}>
+                <label className="interval-label">{info.label}</label>
+                <input
+                  type="number"
+                  className="input short"
+                  value={intervals[typeId] ?? info.defaultInterval}
+                  onChange={(e) => handleIntervalChange(typeId, e.target.value)}
+                  min={1}
+                  max={90}
+                />
+                <span className="hint">天</span>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </section>
 
       <section className="settings-section">
