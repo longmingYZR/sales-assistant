@@ -1,14 +1,14 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'salesAssistant';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise = null;
 
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
+      upgrade(db, oldVersion, newVersion, tx) {
         if (oldVersion < 1) {
           const customers = db.createObjectStore('customers', {
             keyPath: 'id',
@@ -30,20 +30,16 @@ function getDB() {
           });
         }
         if (oldVersion < 2) {
-          const tx = db.transaction('followUps', 'readwrite');
-          const store = tx.objectStore('followUps');
-          if (!store.indexNames.contains('type')) {
-            store.createIndex('type', 'type');
+          const fuStore = tx.objectStore('followUps');
+          if (!fuStore.indexNames.contains('type')) {
+            fuStore.createIndex('type', 'type');
           }
-          store.openCursor().then(function cursorIterate(cursor) {
-            if (!cursor) return;
-            const record = cursor.value;
-            if (!record.type) {
-              record.type = 'other';
-              cursor.update(record);
-            }
-            cursor.continue().then(cursorIterate);
-          });
+        }
+        if (oldVersion < 3) {
+          const fuStore = tx.objectStore('followUps');
+          if (!fuStore.indexNames.contains('type')) {
+            fuStore.createIndex('type', 'type');
+          }
         }
       },
     });
