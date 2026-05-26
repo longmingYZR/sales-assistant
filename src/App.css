@@ -906,6 +906,127 @@ body {
   text-align: center;
 }
 
+/* === Products Section === */
+.products-section {
+  margin-top: 18px;
+}
+.products-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+/* === Quotation Flow === */
+
+/* Step 1: Product selector */
+.quote-select h4,
+.quote-confirm h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.quote-product-list {
+  max-height: 360px;
+  overflow-y: auto;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.quote-product-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.quote-product-item:last-child { border-bottom: none; }
+.quote-product-item.selected {
+  background: rgba(74, 158, 255, 0.08);
+}
+.quote-product-item input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.quote-product-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.quote-product-price {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+.quote-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.quote-actions .btn-back {
+  flex: 1;
+}
+.quote-actions .btn-primary,
+.quote-actions .btn-danger {
+  flex: 2;
+}
+
+/* Step 2: Confirmation */
+.quote-confirm .confirm-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.confirm-warn {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.confirm-ok {
+  color: var(--success);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.bank-section {
+  border-color: var(--danger) !important;
+}
+.confirm-product-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.confirm-product-name {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 80px;
+}
+.confirm-product-row .input.short {
+  width: 80px;
+  text-align: center;
+}
+.quote-check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.quote-check-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
 /* === Responsive (wider screens) === */
 @media (min-width: 481px) {
   .app-container {

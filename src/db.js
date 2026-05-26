@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'salesAssistant';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise = null;
 
@@ -36,6 +36,10 @@ async function getDB() {
         }
         if (oldVersion < 3) {
           try { tx.objectStore('followUps').createIndex('type', 'type'); } catch (e) { /* exists */ }
+        }
+        if (oldVersion < 4) {
+          db.createObjectStore('priceLists', { keyPath: 'id', autoIncrement: true });
+          db.createObjectStore('templates', { keyPath: 'id', autoIncrement: true });
         }
       },
       blocked() {
@@ -159,4 +163,43 @@ export async function getAllChunks() {
     }
   }
   return chunks;
+}
+
+// --- Price Lists (Excel 价格表) ---
+
+export async function getAllPriceLists() {
+  const db = await getDB();
+  return db.getAll('priceLists');
+}
+
+export async function addPriceList(pl) {
+  const db = await getDB();
+  return db.add('priceLists', { ...pl, uploadedAt: Date.now() });
+}
+
+export async function deletePriceList(id) {
+  const db = await getDB();
+  return db.delete('priceLists', id);
+}
+
+// --- Templates (Excel 报价模板) ---
+
+export async function getAllTemplates() {
+  const db = await getDB();
+  return db.getAll('templates');
+}
+
+export async function getTemplate(id) {
+  const db = await getDB();
+  return db.get('templates', id);
+}
+
+export async function addTemplate(tpl) {
+  const db = await getDB();
+  return db.add('templates', { ...tpl, uploadedAt: Date.now() });
+}
+
+export async function deleteTemplate(id) {
+  const db = await getDB();
+  return db.delete('templates', id);
 }

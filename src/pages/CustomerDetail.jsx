@@ -11,6 +11,10 @@ import {
 } from '../db';
 import { generateQuotation } from '../utils/analysis';
 import { FOLLOWUP_TYPES, STAGE_FOLLOWUP_TYPES, getIntervalDays } from '../utils/followupTypes';
+import {
+  getAllPriceLists, getAllTemplates,
+} from '../db';
+import { buildQuotationHTML, exportQuotationPDF } from '../utils/quotation';
 
 const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置'];
 const COUNTRIES = [
@@ -40,6 +44,18 @@ export default function CustomerDetail() {
   const [loading, setLoading] = useState(!isNew);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quotation, setQuotation] = useState('');
+
+  // New quotation flow states
+  const [quoteStep, setQuoteStep] = useState('idle'); // idle | select | confirm
+  const [priceLists, setPriceLists] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [quoteInfo, setQuoteInfo] = useState({ number: '', date: new Date().toISOString().slice(0, 10) });
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [confirmed, setConfirmed] = useState({ prices: false, bank: false, terms: false });
+  const [bankInfo, setBankInfo] = useState('');
+  const [template, setTemplate] = useState(null);
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
 
@@ -99,25 +115,114 @@ export default function CustomerDetail() {
     navigate('/customers');
   };
 
-  const handleGenerateQuote = async () => {
-    const apiKey = localStorage.getItem('aiApiKey');
-    const providerId = localStorage.getItem('aiProvider') || 'claude';
-    if (!apiKey) { alert('请先在设置页配置 AI API Key'); return; }
+  // --- New Quotation Flow ---
 
-    setQuoteLoading(true);
-    setQuotation('');
-    try {
-      const chunks = await getAllChunks();
-      if (chunks.length === 0) {
-        setQuotation('提示：暂未上传产品文档，将生成报价单框架。建议先上传产品 PDF 以获得更准确的报价。\n\n');
-      }
-      const result = await generateQuotation(form, chunks, apiKey, providerId);
-      setQuotation((prev) => prev + result);
-    } catch (err) {
-      setQuotation(`生成失败：${err.message}`);
-    } finally {
-      setQuoteLoading(false);
+  const openQuotation = async () => {
+    const pls = await getAllPriceLists();
+    const tpls = await getAllTemplates();
+    setPriceLists(pls);
+    setTemplates(tpls);
+    if (tpls.length === 0) {
+      alert('请先在产品页上传报价模板（Excel）');
+      return;
     }
+    setTemplate(tpls[0]); // use first template by default
+    setSelectedProducts([]);
+    setSearchTerm('');
+    setQuoteStep('select');
+  };
+
+  // Build product list from all price lists
+  const allPriceItems = priceLists.flatMap((pl) =>
+    (pl.rows || []).map((row, i) => {
+      const item = {};
+      (pl.headers || []).forEach((h, ci) => { item[h] = row[ci] || ''; });
+      item._priceListId = pl.id;
+      item._rowIndex = i;
+      return item;
+    })
+  );
+
+  const filteredItems = searchTerm
+    ? allPriceItems.filter((item) =>
+        Object.values(item).some((v) =>
+          String(v).toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      )
+    : allPriceItems;
+
+  const toggleProduct = (item) => {
+    setSelectedProducts((prev) => {
+      const exists = prev.find((p) => p._priceListId === item._priceListId && p._rowIndex === item._rowIndex);
+      if (exists) return prev.filter((p) => p !== exists);
+      return [...prev, { ...item, qty: 1, columns: {} }];
+    });
+  };
+
+  const updateQty = (idx, qty) => {
+    setSelectedProducts((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], qty: Math.max(1, Number(qty) || 1) };
+      return next;
+    });
+  };
+
+  const updatePriceCol = (idx, col, val) => {
+    setSelectedProducts((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], columns: { ...next[idx].columns, [col]: val } };
+      return next;
+    });
+  };
+
+  const goToConfirm = () => {
+    if (selectedProducts.length === 0) {
+      alert('请至少选择一个产品');
+      return;
+    }
+    // Extract bank info from template
+    const raw = template?.sheets?.[template?.sheetNames?.[0]] || [];
+    for (const row of raw) {
+      const cellStr = String(row[1] || '');
+      if (cellStr.includes('Beneficiary') || cellStr.includes('Bank') || cellStr.includes('SWIFT')) {
+        setBankInfo(cellStr);
+      }
+    }
+    setQuoteInfo((prev) => ({
+      ...prev,
+      number: `QT${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`,
+    }));
+    setQuoteStep('confirm');
+  };
+
+  const handleExportPDF = () => {
+    // Build priceCols from template or selected products
+    const raw = template?.sheets?.[template?.sheetNames?.[0]] || [];
+    const headerRow = raw.find((r) => String(r[1] || '').includes('No.')) || [];
+    const priceCols = headerRow.map((h, i) => ({
+      key: String(i),
+      header: String(h || '').replace(/\n/g, ' '),
+    }));
+
+    const products = selectedProducts.map((p, i) => ({
+      no: String(i + 1),
+      product: p.name || p.model || Object.values(p)[0] || '',
+      qty: p.qty,
+      ...Object.fromEntries(
+        priceCols.slice(4, priceCols.length - 1).map((c) => [
+          c.key, p.columns[c.key] || String(Object.values(p).find((v, k) => k !== 'qty' && k !== '_priceListId' && k !== '_rowIndex' && k !== 'columns' && k !== 'name' && k !== 'model' && String(v).match(/^\d/)) || ''),
+        ])
+      ),
+    }));
+
+    exportQuotationPDF(
+      { companyName: form.companyName, contactName: form.contactName },
+      products,
+      priceCols,
+      bankInfo,
+      quoteInfo,
+      { name: '', contact: '' }
+    );
   };
 
   const updateField = (field, value) => setForm({ ...form, [field]: value });
@@ -258,15 +363,138 @@ export default function CustomerDetail() {
       {!isNew && (
         <section className="followup-section">
           <h3>报价单生成</h3>
-          <button
-            className="btn btn-primary btn-full"
-            onClick={handleGenerateQuote}
-            disabled={quoteLoading}
-          >
-            {quoteLoading ? 'AI 生成中...' : '一键生成报价单'}
-          </button>
-          {quotation && (
-            <div className="quotation-result">{quotation}</div>
+
+          {quoteStep === 'idle' && (
+            <button className="btn btn-primary btn-full" onClick={openQuotation}>
+              生成报价单
+            </button>
+          )}
+
+          {/* Step 1: Select products */}
+          {quoteStep === 'select' && (
+            <div className="quote-select">
+              <h4>选择产品</h4>
+              <input
+                className="input"
+                placeholder="搜索型号/名称..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="quote-product-list">
+                {filteredItems.length === 0 ? (
+                  <p className="empty">未找到产品，请先在产品页上传价格表</p>
+                ) : (
+                  filteredItems.map((item, i) => {
+                    const sel = selectedProducts.find((p) => p._priceListId === item._priceListId && p._rowIndex === item._rowIndex);
+                    const displayName = item['名称'] || item['型号'] || item['Product'] || item['model'] || item['name'] || Object.values(item).filter((v) => String(v).length > 2)[0] || '产品';
+                    return (
+                      <label key={i} className={`quote-product-item ${sel ? 'selected' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={!!sel}
+                          onChange={() => toggleProduct(item)}
+                        />
+                        <span className="quote-product-name">{displayName}</span>
+                        <span className="quote-product-price">
+                          {item['单价'] || item['Unit Price'] || item['Price'] || item['price'] || item[Object.keys(item).find((k) => /价|Price|price/.test(k)) || ''] || ''}
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <div className="quote-actions">
+                <button className="btn btn-back" onClick={() => setQuoteStep('idle')}>取消</button>
+                <button className="btn btn-primary" onClick={goToConfirm}>
+                  下一步（{selectedProducts.length} 个产品）
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Confirm & export */}
+          {quoteStep === 'confirm' && (
+            <div className="quote-confirm">
+              <h4>确认报价信息</h4>
+              <p className="hint">报价单号：{quoteInfo.number} &nbsp; 日期：{quoteInfo.date}</p>
+
+              {/* Product table with editable prices */}
+              <div className="confirm-section">
+                <h5 className={!confirmed.prices ? 'confirm-warn' : 'confirm-ok'}>
+                  {!confirmed.prices ? '⚠ 请确认产品价格及费用' : '✓ 价格已确认'}
+                </h5>
+                {selectedProducts.map((p, idx) => {
+                  const name = p['名称'] || p['型号'] || p['Product'] || p['model'] || p['name'] || '';
+                  const priceKeys = Object.keys(p).filter((k) =>
+                    k !== '_priceListId' && k !== '_rowIndex' && k !== 'columns' && k !== 'qty' && k !== 'name' && k !== 'model' &&
+                    (String(p[k]).match(/^\d+(\.\d+)?$/) || /价|Price|price|单价|Unit/.test(k))
+                  );
+                  return (
+                    <div key={idx} className="confirm-product-row">
+                      <span className="confirm-product-name">{name}</span>
+                      <input type="number" className="input short" value={p.qty} onChange={(e) => updateQty(idx, e.target.value)} min={1} />
+                      {priceKeys.map((pk) => (
+                        <input
+                          key={pk}
+                          type="text"
+                          className="input short"
+                          value={p.columns[pk] || p[pk] || ''}
+                          onChange={(e) => updatePriceCol(idx, pk, e.target.value)}
+                          placeholder={pk}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
+                <button className="btn btn-sm btn-primary" onClick={() => setConfirmed({ ...confirmed, prices: true })} disabled={confirmed.prices}>
+                  {confirmed.prices ? '已确认' : '确认价格'}
+                </button>
+              </div>
+
+              {/* Bank info confirmation */}
+              <div className="confirm-section bank-section">
+                <h5 className={!confirmed.bank ? 'confirm-warn' : 'confirm-ok'}>
+                  {!confirmed.bank ? '🔴 请核对银行信息（敏感）' : '✓ 银行已确认'}
+                </h5>
+                <textarea
+                  className="input textarea"
+                  value={bankInfo}
+                  onChange={(e) => setBankInfo(e.target.value)}
+                  rows={5}
+                  placeholder="银行信息从模板中提取..."
+                />
+                <button className="btn btn-sm btn-primary" onClick={() => setConfirmed({ ...confirmed, bank: true })} disabled={confirmed.bank}>
+                  {confirmed.bank ? '已确认' : '确认银行信息'}
+                </button>
+              </div>
+
+              {/* Terms confirmation */}
+              <div className="confirm-section">
+                <h5 className={!confirmed.terms ? 'confirm-warn' : 'confirm-ok'}>
+                  {!confirmed.terms ? '⚠ 请确认报价条款' : '✓ 条款已确认'}
+                </h5>
+                <label className="quote-check-label">
+                  <input type="checkbox" checked={confirmed.terms} onChange={(e) => setConfirmed({ ...confirmed, terms: e.target.checked })} />
+                  报价有效期、付款条款、交货条款已确认无误
+                </label>
+              </div>
+
+              <div className="quote-actions">
+                <button className="btn btn-back" onClick={() => setQuoteStep('select')}>返回选择</button>
+                <button
+                  className="btn btn-danger btn-full"
+                  onClick={handleExportPDF}
+                  disabled={!confirmed.prices || !confirmed.bank || !confirmed.terms}
+                >
+                  导出 PDF
+                </button>
+              </div>
+              {(!confirmed.prices || !confirmed.bank || !confirmed.terms) && (
+                <p className="hint" style={{ textAlign: 'center', marginTop: 8 }}>
+                  请确认所有项目后再导出
+                </p>
+              )}
+            </div>
           )}
         </section>
       )}
