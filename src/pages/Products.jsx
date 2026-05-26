@@ -39,13 +39,16 @@ export default function Products() {
       if (ext === 'pdf') {
         await handlePDF(file);
       } else if (ext === 'xls' || ext === 'xlsx') {
-        // Read Excel once, detect type by headers
+        // Read Excel once, detect type
         const { headers, rows, sheets, sheetNames } = await parseExcelOnce(file);
-        const hasPriceHeaders = headers.some((h) => /价|Price|price|单价|unit/i.test(String(h)));
-        if (hasPriceHeaders) {
-          await handlePriceListResult(file.name, headers, rows);
-        } else {
+        // Check for template indicators: To/From/Bank/Beneficiary/SWIFT/报价/QUOTATION
+        const allCells = (rows || []).flat().map((c) => String(c));
+        const allText = [...headers.map((h) => String(h)), ...allCells].join(' ');
+        const isTemplate = /To:|From:|Beneficiary|SWIFT|报价单|QUOTATION|Warranty|Remarks|Payment Terms/i.test(allText);
+        if (isTemplate) {
           await handleTemplateResult(file.name, sheets, sheetNames);
+        } else {
+          await handlePriceListResult(file.name, headers, rows);
         }
       } else {
         throw new Error('不支持的文件格式，请上传 PDF 或 Excel 文件');
