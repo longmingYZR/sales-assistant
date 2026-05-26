@@ -926,42 +926,49 @@ body {
   font-weight: 600;
   margin-bottom: 10px;
 }
-.quote-product-list {
-  max-height: 360px;
-  overflow-y: auto;
+.quote-product-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  max-height: 420px;
+  overflow-y: auto;
 }
-.quote-product-item {
+.quote-product-card {
+  position: relative;
+  flex: 0 0 calc(50% - 5px);
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  justify-content: center;
+  padding: 18px 10px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: var(--font-size-sm);
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
 }
-.quote-product-item:last-child { border-bottom: none; }
-.quote-product-item.selected {
+.quote-product-card:active {
+  transform: scale(0.97);
+}
+.quote-product-card.selected {
+  border-color: var(--accent);
   background: rgba(74, 158, 255, 0.08);
 }
-.quote-product-item input[type="checkbox"] {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-}
-.quote-product-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.quote-product-price {
-  flex-shrink: 0;
+.quote-product-card .card-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 14px;
   color: var(--accent);
+  font-weight: 700;
+}
+.quote-product-card .card-name {
+  font-size: 14px;
   font-weight: 600;
+  text-align: center;
+  word-break: break-word;
 }
 .quote-actions {
   display: flex;

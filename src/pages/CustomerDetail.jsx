@@ -53,6 +53,20 @@ export default function CustomerDetail() {
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
 
+const NAME_KEYS = ['型号', 'Model', 'model', '产品型号', '名称', 'Product', 'name', '品名', '产品名称', '产品'];
+
+function getProductName(item) {
+  for (const k of NAME_KEYS) {
+    const v = item[k];
+    if (v && String(v).trim().length > 0) return String(v).trim();
+  }
+  for (const v of Object.values(item)) {
+    const s = String(v).trim();
+    if (s.length > 2 && !/^\d+(\.\d+)?$/.test(s) && !s.startsWith('_')) return s;
+  }
+  return '产品';
+}
+
   useEffect(() => {
     if (!isNew) {
       loadCustomer();
@@ -374,29 +388,25 @@ export default function CustomerDetail() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <div className="quote-product-list">
-                {filteredItems.length === 0 ? (
-                  <p className="empty">未找到产品，请先在产品页上传价格表</p>
-                ) : (
-                  filteredItems.map((item, i) => {
+              {filteredItems.length === 0 ? (
+                <p className="empty">未找到产品，请先在产品页上传价格表</p>
+              ) : (
+                <div className="quote-product-grid">
+                  {filteredItems.map((item, i) => {
                     const sel = selectedProducts.find((p) => p._priceListId === item._priceListId && p._rowIndex === item._rowIndex);
-                    const displayName = item['名称'] || item['型号'] || item['Product'] || item['model'] || item['name'] || Object.values(item).filter((v) => String(v).length > 2)[0] || '产品';
                     return (
-                      <label key={i} className={`quote-product-item ${sel ? 'selected' : ''}`}>
-                        <input
-                          type="checkbox"
-                          checked={!!sel}
-                          onChange={() => toggleProduct(item)}
-                        />
-                        <span className="quote-product-name">{displayName}</span>
-                        <span className="quote-product-price">
-                          {item['单价'] || item['Unit Price'] || item['Price'] || item['price'] || item[Object.keys(item).find((k) => /价|Price|price/.test(k)) || ''] || ''}
-                        </span>
-                      </label>
+                      <div
+                        key={i}
+                        className={`quote-product-card ${sel ? 'selected' : ''}`}
+                        onClick={() => toggleProduct(item)}
+                      >
+                        {sel && <span className="card-check">&#10003;</span>}
+                        <span className="card-name">{getProductName(item)}</span>
+                      </div>
                     );
-                  })
-                )}
-              </div>
+                  })}
+                </div>
+              )}
               <div className="quote-actions">
                 <button className="btn btn-back" onClick={() => setQuoteStep('idle')}>取消</button>
                 <button className="btn btn-primary" onClick={goToConfirm}>
