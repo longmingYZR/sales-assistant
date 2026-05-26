@@ -7,14 +7,11 @@ import {
   deleteCustomer,
   getFollowUps,
   addFollowUp,
-  getAllChunks,
+  getAllPriceLists,
+  getAllTemplates,
 } from '../db';
-import { generateQuotation } from '../utils/analysis';
 import { FOLLOWUP_TYPES, STAGE_FOLLOWUP_TYPES, getIntervalDays } from '../utils/followupTypes';
-import {
-  getAllPriceLists, getAllTemplates,
-} from '../db';
-import { buildQuotationHTML, exportQuotationPDF } from '../utils/quotation';
+import { exportQuotationPDF } from '../utils/quotation';
 
 const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置'];
 const COUNTRIES = [
@@ -42,10 +39,7 @@ export default function CustomerDetail() {
   const [followUpType, setFollowUpType] = useState('visit');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quotation, setQuotation] = useState('');
-
-  // New quotation flow states
+  // Quotation flow states
   const [quoteStep, setQuoteStep] = useState('idle'); // idle | select | confirm
   const [priceLists, setPriceLists] = useState([]);
   const [templates, setTemplates] = useState([]);
