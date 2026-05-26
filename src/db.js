@@ -5,8 +5,10 @@ const DB_VERSION = 3;
 
 let dbPromise = null;
 
-function getDB() {
-  if (!dbPromise) {
+async function getDB() {
+  if (dbPromise) return dbPromise;
+
+  try {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion, newVersion, tx) {
         if (oldVersion < 1) {
@@ -30,21 +32,23 @@ function getDB() {
           });
         }
         if (oldVersion < 2) {
-          const fuStore = tx.objectStore('followUps');
-          if (!fuStore.indexNames.contains('type')) {
-            fuStore.createIndex('type', 'type');
-          }
+          try { tx.objectStore('followUps').createIndex('type', 'type'); } catch (e) { /* exists */ }
         }
         if (oldVersion < 3) {
-          const fuStore = tx.objectStore('followUps');
-          if (!fuStore.indexNames.contains('type')) {
-            fuStore.createIndex('type', 'type');
-          }
+          try { tx.objectStore('followUps').createIndex('type', 'type'); } catch (e) { /* exists */ }
         }
       },
+      blocked() {
+        dbPromise = null;
+      },
     });
+    return dbPromise;
+  } catch (err) {
+    console.warn('DB open failed, recreating database...', err);
+    dbPromise = null;
+    await indexedDB.deleteDatabase(DB_NAME);
+    return getDB();
   }
-  return dbPromise;
 }
 
 // --- Customers ---
