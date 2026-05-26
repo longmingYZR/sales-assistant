@@ -638,11 +638,13 @@ body {
   align-items: center;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
   min-height: var(--touch-target);
 }
 
 .doc-icon {
   font-size: 28px;
+  flex-shrink: 0;
 }
 
 .doc-actions {
