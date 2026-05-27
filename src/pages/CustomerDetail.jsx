@@ -72,6 +72,24 @@ function getProductName(item) {
   return '产品';
 }
 
+// Product name keywords for filtering valid product rows
+const PRODUCT_NAME_PATTERNS = /宽体车|矿卡|矿挖|电挖|鄂破|反击破|圆锥破|筛分站|潜孔钻机|电动轮/;
+const MODEL_PATTERN = /^(ZT|ZE|ZM|ZDH|ZMS|ZMI|ZMC)/;
+
+function isProductRow(item) {
+  for (const v of Object.values(item)) {
+    const s = String(v).trim();
+    if (MODEL_PATTERN.test(s)) return true;
+    if (PRODUCT_NAME_PATTERNS.test(s)) return true;
+  }
+  const fobKeys = ['FOB(USD)', 'FOB', 'fob'];
+  for (const k of fobKeys) {
+    const v = item[k];
+    if (v && !isNaN(Number(v)) && Number(v) > 1000) return true;
+  }
+  return false;
+}
+
   useEffect(() => {
     if (!isNew) {
       loadCustomer();
@@ -149,7 +167,7 @@ function getProductName(item) {
     setQuoteStep('select');
   };
 
-  // Build product list from all price lists
+  // Build product list from all price lists, filter out non-product rows
   const allPriceItems = priceLists.flatMap((pl) =>
     (pl.rows || []).map((row, i) => {
       const item = {};
@@ -158,7 +176,7 @@ function getProductName(item) {
       item._rowIndex = i;
       return item;
     })
-  );
+  ).filter(isProductRow);
 
   const filteredItems = searchTerm
     ? allPriceItems.filter((item) =>
