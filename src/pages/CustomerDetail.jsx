@@ -30,6 +30,22 @@ const emptyForm = {
   stage: '初接触',
 };
 
+// Inline collapsible section component
+function CollapsibleSection({ title, badge, collapsed, onToggle, children }) {
+  return (
+    <section className="collapsible-section">
+      <div className="section-header" onClick={onToggle}>
+        <span className="section-title">{title}</span>
+        {badge && <span className="section-badge">{badge}</span>}
+        <span className={`section-arrow ${collapsed ? '' : 'open'}`}>
+          {collapsed ? '▶' : '▼'}
+        </span>
+      </div>
+      {!collapsed && <div className="section-body">{children}</div>}
+    </section>
+  );
+}
+
 export default function CustomerDetail() {
   const { id } = useParams();
   const isNew = id === 'new';
@@ -55,8 +71,18 @@ export default function CustomerDetail() {
   // Country pricing state
   const [countryPricing, setCountryPricing] = useState(null);
   const [countrySelectedSeqs, setCountrySelectedSeqs] = useState(new Set());
+  // Collapsible sections
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['quotation']));
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
+
+  const toggleSection = (name) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  };
 
 const NAME_KEYS = ['型号', 'Model', 'model', '产品型号', '名称', 'Product', 'name', '品名', '产品名称', '产品'];
 
@@ -275,11 +301,9 @@ function isProductRow(item) {
 
   const addCountryProductsToQuotation = () => {
     if (!countryPricing || countrySelectedSeqs.size === 0) return;
-    // Build selected product objects compatible with quotation flow
     const selected = countryPricing.products
       .filter((p) => countrySelectedSeqs.has(p.seq))
       .map((p) => {
-        // Find the FOB price key in the existing price list items
         const item = {
           _priceListId: 'country-' + countryPricing.country,
           _rowIndex: p.seq,
@@ -290,13 +314,11 @@ function isProductRow(item) {
           qty: 1,
           columns: {},
         };
-        // Attach all fields so quotation can use them
         if (p.allFields) {
           Object.entries(p.allFields).forEach(([k, v]) => {
             item[k] = v;
           });
         }
-        // Pre-fill key price columns in the columns map
         if (pricingModel === 'DDP' && p.ddp) {
           item.columns['DDP价(USD)'] = p.ddp;
         } else if (pricingModel === 'CIF' && p.cif) {
@@ -308,7 +330,6 @@ function isProductRow(item) {
 
     setSelectedProducts((prev) => [...prev, ...selected]);
     setCountrySelectedSeqs(new Set());
-    // Open quotation if not already open
     if (quoteStep === 'idle') {
       openQuotation();
     } else {
@@ -335,111 +356,80 @@ function isProductRow(item) {
         )}
       </div>
 
-      <h2 className="page-title">{isNew ? '新增客户' : '客户详情'}</h2>
+      <h2 className="page-title">{isNew ? '新增客户' : form.companyName || '客户详情'}</h2>
 
-      <div className="form">
-        <label className="form-label">公司名 *</label>
-        <input
-          className="input"
-          value={form.companyName}
-          onChange={(e) => updateField('companyName', e.target.value)}
-          placeholder="公司名称"
-        />
+      {/* Section 1: Customer Info */}
+      <CollapsibleSection
+        title="客户信息"
+        badge={form.stage}
+        collapsed={collapsedSections.has('customerInfo')}
+        onToggle={() => toggleSection('customerInfo')}
+      >
+        <div className="form">
+          <label className="form-label">公司名 *</label>
+          <input
+            className="input"
+            value={form.companyName}
+            onChange={(e) => updateField('companyName', e.target.value)}
+            placeholder="公司名称"
+          />
 
-        <label className="form-label">联系人</label>
-        <input
-          className="input"
-          value={form.contactName}
-          onChange={(e) => updateField('contactName', e.target.value)}
-          placeholder="联系人姓名"
-        />
+          <label className="form-label">联系人</label>
+          <input
+            className="input"
+            value={form.contactName}
+            onChange={(e) => updateField('contactName', e.target.value)}
+            placeholder="联系人姓名"
+          />
 
-        <label className="form-label">国家</label>
-        <select
-          className="select"
-          value={form.country}
-          onChange={(e) => updateField('country', e.target.value)}
-        >
-          {COUNTRIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          <label className="form-label">国家</label>
+          <select
+            className="select"
+            value={form.country}
+            onChange={(e) => updateField('country', e.target.value)}
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
 
-        <label className="form-label">销售阶段</label>
-        <select
-          className="select"
-          value={form.stage}
-          onChange={(e) => updateField('stage', e.target.value)}
-        >
-          {STAGES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+          <label className="form-label">销售阶段</label>
+          <select
+            className="select"
+            value={form.stage}
+            onChange={(e) => updateField('stage', e.target.value)}
+          >
+            {STAGES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
 
-        <label className="form-label">需求描述</label>
-        <textarea
-          className="input textarea"
-          value={form.needs}
-          onChange={(e) => updateField('needs', e.target.value)}
-          placeholder="客户需求..."
-          rows={3}
-        />
+          <label className="form-label">需求描述</label>
+          <textarea
+            className="input textarea"
+            value={form.needs}
+            onChange={(e) => updateField('needs', e.target.value)}
+            placeholder="客户需求..."
+            rows={3}
+          />
 
-        <button
-          className="btn btn-primary btn-full"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? '保存中...' : '保存'}
-        </button>
-      </div>
+          <button
+            className="btn btn-primary btn-full"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? '保存中...' : '保存'}
+          </button>
+        </div>
+      </CollapsibleSection>
 
-      {/* Country Product Cards */}
-      {!isNew && countryPricing && (
-        <section className="followup-section">
-          <div className="country-pricing-header">
-            <h3>产品报价 - {form.country}</h3>
-            <span className={`pricing-model-badge ${countryPricing.pricingModel === 'CIF' ? 'cif' : ''}`}>
-              {countryPricing.pricingModel}
-            </span>
-          </div>
-          {countryPricing.products.length > 0 ? (
-            <>
-              <CountryProductCards
-                products={countryPricing.products}
-                pricingModel={countryPricing.pricingModel}
-                selectedSeqSet={countrySelectedSeqs}
-                onToggleSelect={handleCountryToggleSelect}
-              />
-              <div className="country-pricing-actions">
-                <button
-                  className="btn btn-primary btn-full"
-                  disabled={countrySelectedSeqs.size === 0}
-                  onClick={addCountryProductsToQuotation}
-                >
-                  {countrySelectedSeqs.size > 0
-                    ? `将选中的 ${countrySelectedSeqs.size} 个产品加入报价单`
-                    : '请选择产品加入报价单'}
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="country-pricing-hint">暂无产品数据</p>
-          )}
-        </section>
-      )}
-
-      {!isNew && countryPricing === null && hasProductPricing(form.country) === false && (
-        <section className="followup-section">
-          <h3>产品报价 - {form.country}</h3>
-          <p className="country-pricing-hint">暂无该国详细报价数据</p>
-        </section>
-      )}
-
+      {/* Section 2: Follow-up Records (moved up, right after customer info) */}
       {!isNew && (
-        <section className="followup-section">
-          <h3>跟进记录 ({followUps.length})</h3>
-
+        <CollapsibleSection
+          title={`跟进记录 (${followUps.length})`}
+          collapsed={collapsedSections.has('followUps')}
+          onToggle={() => toggleSection('followUps')}
+        >
           <div className="followup-input">
             <textarea
               className="input textarea"
@@ -492,13 +482,61 @@ function isProductRow(item) {
               ))}
             </ul>
           )}
-        </section>
+        </CollapsibleSection>
       )}
 
-      {!isNew && (
-        <section className="followup-section">
-          <h3>报价单生成</h3>
+      {/* Section 3: Country Product Cards */}
+      {!isNew && countryPricing && (
+        <CollapsibleSection
+          title={`产品报价 - ${form.country}`}
+          badge={countryPricing.pricingModel}
+          collapsed={collapsedSections.has('productPricing')}
+          onToggle={() => toggleSection('productPricing')}
+        >
+          {countryPricing.products.length > 0 ? (
+            <>
+              <CountryProductCards
+                products={countryPricing.products}
+                pricingModel={countryPricing.pricingModel}
+                selectedSeqSet={countrySelectedSeqs}
+                onToggleSelect={handleCountryToggleSelect}
+              />
+              <div className="country-pricing-actions">
+                <button
+                  className="btn btn-primary btn-full"
+                  disabled={countrySelectedSeqs.size === 0}
+                  onClick={addCountryProductsToQuotation}
+                >
+                  {countrySelectedSeqs.size > 0
+                    ? `将选中的 ${countrySelectedSeqs.size} 个产品加入报价单`
+                    : '请选择产品加入报价单'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="country-pricing-hint">暂无产品数据</p>
+          )}
+        </CollapsibleSection>
+      )}
 
+      {!isNew && countryPricing === null && hasProductPricing(form.country) === false && (
+        <CollapsibleSection
+          title={`产品报价 - ${form.country}`}
+          collapsed={collapsedSections.has('productPricing')}
+          onToggle={() => toggleSection('productPricing')}
+        >
+          <p className="country-pricing-hint">暂无该国详细报价数据</p>
+        </CollapsibleSection>
+      )}
+
+      {/* Section 4: Quotation (default collapsed) */}
+      {!isNew && (
+        <CollapsibleSection
+          title="报价单生成"
+          badge={selectedProducts.length > 0 ? `${selectedProducts.length}个产品` : null}
+          collapsed={collapsedSections.has('quotation')}
+          onToggle={() => toggleSection('quotation')}
+        >
           {quoteStep === 'idle' && (
             <button className="btn btn-primary btn-full" onClick={openQuotation}>
               生成报价单
@@ -627,7 +665,7 @@ function isProductRow(item) {
               )}
             </div>
           )}
-        </section>
+        </CollapsibleSection>
       )}
     </div>
   );

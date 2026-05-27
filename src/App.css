@@ -1034,6 +1034,49 @@ body {
   accent-color: var(--accent);
 }
 
+/* === Collapsible Sections === */
+.collapsible-section {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.section-header:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.section-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(74, 158, 255, 0.12);
+  color: var(--accent);
+}
+.section-arrow {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+.section-body {
+  padding: 0 14px 14px;
+}
+
 /* === Country Product Cards === */
 .country-pricing-header {
   display: flex;
