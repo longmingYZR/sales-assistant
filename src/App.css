@@ -1004,22 +1004,58 @@ body {
   border-color: var(--danger) !important;
 }
 .confirm-product-row {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.confirm-product-header {
   display: flex;
-  gap: 6px;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
 }
 .confirm-product-name {
-  flex: 1;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 80px;
+  flex: 1;
 }
-.confirm-product-row .input.short {
-  width: 80px;
-  text-align: center;
+.confirm-qty-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.confirm-qty-label .input.short {
+  width: 60px;
+}
+.confirm-price-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.confirm-price-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.price-key-text {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.confirm-price-label .input.short {
+  width: 90px;
 }
 .quote-check-label {
   display: flex;
@@ -1219,6 +1255,27 @@ body {
   border-top: 1px solid var(--border);
   cursor: pointer;
   text-align: center;
+}
+.card-costs {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.cost-check-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.cost-check-label input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--accent);
+  margin: 0;
 }
 .card-detail {
   margin-top: 6px;

@@ -71,8 +71,9 @@ export default function CustomerDetail() {
   // Country pricing state
   const [countryPricing, setCountryPricing] = useState(null);
   const [countrySelectedSeqs, setCountrySelectedSeqs] = useState(new Set());
+  const [costSelection, setCostSelection] = useState({});
   // Collapsible sections
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['quotation']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'followUps', 'productPricing', 'quotation']));
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
 
@@ -143,6 +144,7 @@ function isProductRow(item) {
     const pricing = getCountryPricing(c.country);
     setCountryPricing(pricing);
     setCountrySelectedSeqs(new Set());
+    setCostSelection({});
     setLoading(false);
   };
 
@@ -257,24 +259,37 @@ function isProductRow(item) {
   };
 
   const handleExportPDF = () => {
-    // Build priceCols from template or selected products
-    const raw = template?.sheets?.[template?.sheetNames?.[0]] || [];
-    const headerRow = raw.find((r) => String(r[1] || '').includes('No.')) || [];
-    const priceCols = headerRow.map((h, i) => ({
-      key: String(i),
-      header: String(h || '').replace(/\n/g, ' '),
-    }));
+    const priceFieldPattern = /价|Price|price|单价|Unit|FOB|CIF|DDP|海运费|保险|港杂|运费|税|Invoice/i;
 
-    const products = selectedProducts.map((p, i) => ({
-      no: String(i + 1),
-      product: p.name || p.model || Object.values(p)[0] || '',
-      qty: p.qty,
-      ...Object.fromEntries(
-        priceCols.slice(4, priceCols.length - 1).map((c) => [
-          c.key, p.columns[c.key] || String(Object.values(p).find((v, k) => k !== 'qty' && k !== '_priceListId' && k !== '_rowIndex' && k !== 'columns' && k !== 'name' && k !== 'model' && String(v).match(/^\d/)) || ''),
-        ])
-      ),
-    }));
+    // Collect unique price field keys from selected products
+    const priceFieldKeys = new Set();
+    for (const p of selectedProducts) {
+      for (const k of Object.keys(p)) {
+        if (['_priceListId', '_rowIndex', '_source', 'columns', 'qty', 'name', 'model', '序号', '名称', '型号', '外形尺寸', '运输重量'].includes(k)) continue;
+        if (priceFieldPattern.test(k)) priceFieldKeys.add(k);
+      }
+      if (p.columns) {
+        for (const k of Object.keys(p.columns)) {
+          if (k && String(p.columns[k]).trim()) priceFieldKeys.add(k);
+        }
+      }
+    }
+
+    const priceCols = [
+      { key: 'no', header: 'No.' },
+      { key: 'product', header: 'Product' },
+      { key: 'qty', header: 'QTY' },
+      ...Array.from(priceFieldKeys).map((k) => ({ key: k, header: k })),
+    ];
+
+    const products = selectedProducts.map((p, i) => {
+      const name = p['名称'] || p['型号'] || p.model || p.name || '';
+      const row = { no: String(i + 1), product: name, qty: p.qty || 1 };
+      for (const k of priceFieldKeys) {
+        row[k] = p.columns?.[k] || p[k] || '';
+      }
+      return row;
+    });
 
     exportQuotationPDF(
       { companyName: form.companyName, contactName: form.contactName },
@@ -299,18 +314,25 @@ function isProductRow(item) {
     });
   };
 
+  const handleToggleCost = (seq, costType) => {
+    setCostSelection((prev) => {
+      const cur = prev[seq] || {};
+      return { ...prev, [seq]: { ...cur, [costType]: !cur[costType] } };
+    });
+  };
+
   const addCountryProductsToQuotation = () => {
     if (!countryPricing || countrySelectedSeqs.size === 0) return;
     const selected = countryPricing.products
       .filter((p) => countrySelectedSeqs.has(p.seq))
       .map((p) => {
+        const costs = costSelection[p.seq] || {};
         const item = {
           _priceListId: 'country-' + countryPricing.country,
           _rowIndex: p.seq,
           _source: 'countryPricing',
           ['型号']: p.model,
           ['名称']: p.name,
-          ['FOB(USD)']: p.fob,
           qty: 1,
           columns: {},
         };
@@ -319,12 +341,9 @@ function isProductRow(item) {
             item[k] = v;
           });
         }
-        if (pricingModel === 'DDP' && p.ddp) {
-          item.columns['DDP价(USD)'] = p.ddp;
-        } else if (pricingModel === 'CIF' && p.cif) {
-          item.columns['CIF港口(USD)'] = p.cif;
-        }
-        if (p.oceanFreight) item.columns['海运费'] = p.oceanFreight;
+        if (costs.fob && p.fob) item.columns['FOB(USD)'] = p.fob;
+        if (costs.freight && p.oceanFreight) item.columns['海运费'] = p.oceanFreight;
+        if (costs.insurance && p.insurance) item.columns['保险费'] = p.insurance;
         return item;
       });
 
@@ -336,8 +355,6 @@ function isProductRow(item) {
       setQuoteStep('select');
     }
   };
-
-  const pricingModel = countryPricing?.pricingModel || '';
 
   const updateField = (field, value) => setForm({ ...form, [field]: value });
 
@@ -497,9 +514,10 @@ function isProductRow(item) {
             <>
               <CountryProductCards
                 products={countryPricing.products}
-                pricingModel={countryPricing.pricingModel}
                 selectedSeqSet={countrySelectedSeqs}
                 onToggleSelect={handleCountryToggleSelect}
+                costSelection={costSelection}
+                onToggleCost={handleToggleCost}
               />
               <div className="country-pricing-actions">
                 <button
@@ -593,25 +611,34 @@ function isProductRow(item) {
                   {!confirmed.prices ? '⚠ 请确认产品价格及费用' : '✓ 价格已确认'}
                 </h5>
                 {selectedProducts.map((p, idx) => {
-                  const name = p['名称'] || p['型号'] || p['Product'] || p['model'] || p['name'] || '';
+                  const name = p['名称'] || p['型号'] || p.model || p.name || '';
                   const priceKeys = Object.keys(p).filter((k) =>
-                    k !== '_priceListId' && k !== '_rowIndex' && k !== 'columns' && k !== 'qty' && k !== 'name' && k !== 'model' &&
-                    (String(p[k]).match(/^\d+(\.\d+)?$/) || /价|Price|price|单价|Unit/.test(k))
+                    !['_priceListId', '_rowIndex', '_source', 'columns', 'qty', 'name', 'model', '序号', '名称', '型号'].includes(k) &&
+                    /价|Price|price|单价|Unit|FOB|CIF|DDP|海运费|保险|港杂|运费|税|Invoice/i.test(k)
                   );
                   return (
                     <div key={idx} className="confirm-product-row">
-                      <span className="confirm-product-name">{name}</span>
-                      <input type="number" className="input short" value={p.qty} onChange={(e) => updateQty(idx, e.target.value)} min={1} />
-                      {priceKeys.map((pk) => (
-                        <input
-                          key={pk}
-                          type="text"
-                          className="input short"
-                          value={p.columns[pk] || p[pk] || ''}
-                          onChange={(e) => updatePriceCol(idx, pk, e.target.value)}
-                          placeholder={pk}
-                        />
-                      ))}
+                      <div className="confirm-product-header">
+                        <span className="confirm-product-name">{name}</span>
+                        <label className="confirm-qty-label">
+                          Qty <input type="number" className="input short" value={p.qty} onChange={(e) => updateQty(idx, e.target.value)} min={1} />
+                        </label>
+                      </div>
+                      {priceKeys.length > 0 && (
+                        <div className="confirm-price-inputs">
+                          {priceKeys.map((pk) => (
+                            <label key={pk} className="confirm-price-label">
+                              <span className="price-key-text">{pk}</span>
+                              <input
+                                type="text"
+                                className="input short"
+                                value={p.columns[pk] || p[pk] || ''}
+                                onChange={(e) => updatePriceCol(idx, pk, e.target.value)}
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

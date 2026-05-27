@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { getAllDocuments, deleteDocument } from '../db';
 import { getProviders } from '../utils/ai';
-import { FOLLOWUP_TYPES, getDefaultInterval } from '../utils/followupTypes';
+import { FOLLOWUP_TYPES } from '../utils/followupTypes';
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState('');
   const [provider, setProvider] = useState('claude');
   const [intervals, setIntervals] = useState({});
-  const [docs, setDocs] = useState([]);
   const [saved, setSaved] = useState(false);
   const [showIntervals, setShowIntervals] = useState(false);
 
@@ -23,7 +21,6 @@ export default function Settings() {
       initial[typeId] = stored[typeId] != null ? stored[typeId] : FOLLOWUP_TYPES[typeId].defaultInterval;
     }
     setIntervals(initial);
-    getAllDocuments().then(setDocs);
   }, []);
 
   const saveApiKey = () => {
@@ -42,11 +39,6 @@ export default function Settings() {
     const next = { ...intervals, [typeId]: days };
     setIntervals(next);
     localStorage.setItem('followupIntervals', JSON.stringify(next));
-  };
-
-  const handleDeleteDoc = async (id) => {
-    await deleteDocument(id);
-    setDocs(await getAllDocuments());
   };
 
   return (
@@ -108,31 +100,6 @@ export default function Settings() {
         )}
       </section>
 
-      <section className="settings-section">
-        <h3>已上传文档 ({docs.length})</h3>
-        {docs.length === 0 ? (
-          <p className="empty">暂无文档</p>
-        ) : (
-          <ul className="doc-list">
-            {docs.map((doc) => (
-              <li key={doc.id} className="doc-item">
-                <div className="doc-info">
-                  <span className="doc-name">{doc.fileName}</span>
-                  <span className="doc-size">
-                    {(doc.fileSize / 1024).toFixed(1)} KB
-                  </span>
-                </div>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => handleDeleteDoc(doc.id)}
-                >
-                  删除
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

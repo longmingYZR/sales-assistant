@@ -10,18 +10,23 @@ const CATEGORY_CLASS = {
   '其他': 'cat-other',
 };
 
-function formatPrice(val) {
-  if (!val || val === '/') return null;
-  const n = Number(val);
-  if (isNaN(n)) return val;
-  return '$' + n.toLocaleString('en-US');
-}
+// Fields already visible on card preview — exclude from detail
+const VISIBLE_ON_CARD = ['序号', '机型', '名称', '外形尺寸', '运输重量'];
+// Price/freight/tax keywords to exclude from detail
+const PRICE_FREIGHT_TAX = /价|费|税|FOB|CIF|DDP|保险|EXW|Invoice/i;
+
+const COST_OPTIONS = [
+  { key: 'fob', label: 'FOB' },
+  { key: 'freight', label: '海运' },
+  { key: 'insurance', label: '保险' },
+];
 
 export default function CountryProductCards({
   products,
-  pricingModel,
   selectedSeqSet,
   onToggleSelect,
+  costSelection,
+  onToggleCost,
 }) {
   const [expandedSeq, setExpandedSeq] = useState(null);
 
@@ -29,15 +34,13 @@ export default function CountryProductCards({
     return <p className="empty">暂无产品数据</p>;
   }
 
-  const primaryPriceLabel = pricingModel === 'DDP' ? 'DDP' : 'CIF';
-
   return (
     <div className="country-product-grid">
       {products.map((p) => {
         const isSelected = selectedSeqSet?.has(p.seq);
         const isExpanded = expandedSeq === p.seq;
-        const primaryPrice = pricingModel === 'DDP' ? p.ddp : p.cif;
         const catClass = CATEGORY_CLASS[p.category] || 'cat-other';
+        const costs = costSelection?.[p.seq] || {};
 
         return (
           <div
@@ -57,26 +60,24 @@ export default function CountryProductCards({
             {p.dimensions && <div className="card-specs">{p.dimensions}</div>}
             {p.weight && <div className="card-specs">{Number(p.weight).toLocaleString('en-US')} KG</div>}
 
-            <div className="card-prices">
-              <div className="price-row">
-                <span className="price-label">FOB</span>
-                <span className="price-value">{formatPrice(p.fob) || '-'}</span>
-              </div>
-              {p.oceanFreight && (
-                <div className="price-row price-freight">
-                  <span className="price-label">海运费</span>
-                  <span className="price-value">{formatPrice(p.oceanFreight)}</span>
-                </div>
-              )}
-              {primaryPrice && primaryPrice !== '/' && (
-                <div className="price-row price-final">
-                  <span className="price-label">{primaryPriceLabel}</span>
-                  <span className="price-value">{formatPrice(primaryPrice)}</span>
-                </div>
-              )}
+            {/* Cost composition checkboxes */}
+            <div
+              className="card-costs"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {COST_OPTIONS.map((opt) => (
+                <label key={opt.key} className="cost-check-label">
+                  <input
+                    type="checkbox"
+                    checked={!!costs[opt.key]}
+                    onChange={() => onToggleCost?.(p.seq, opt.key)}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
             </div>
 
-            {/* Expandable detail */}
+            {/* Expandable detail — core product params only */}
             <button
               className="card-expand-btn"
               onClick={(e) => {
@@ -89,12 +90,18 @@ export default function CountryProductCards({
 
             {isExpanded && (
               <div className="card-detail">
-                {Object.entries(p.allFields).map(([k, v]) => (
-                  <div key={k} className="detail-row">
-                    <span className="detail-key">{k}</span>
-                    <span className="detail-val">{v}</span>
-                  </div>
-                ))}
+                {Object.entries(p.allFields)
+                  .filter(([k]) => {
+                    if (VISIBLE_ON_CARD.some((v) => k.includes(v))) return false;
+                    if (PRICE_FREIGHT_TAX.test(k)) return false;
+                    return true;
+                  })
+                  .map(([k, v]) => (
+                    <div key={k} className="detail-row">
+                      <span className="detail-key">{k}</span>
+                      <span className="detail-val">{v}</span>
+                    </div>
+                  ))}
               </div>
             )}
           </div>
