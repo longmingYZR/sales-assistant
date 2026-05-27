@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllCustomers, getAllFollowUps, getLastFollowUp } from '../db';
 import { detectZombieCustomers } from '../utils/analysis';
 import { getIntervalDays, FOLLOWUP_TYPES } from '../utils/followupTypes';
+import { hasProductPricing } from '../utils/countryPricing';
 
 const STAGES = ['全部', '初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '低活跃'];
 const COUNTRIES = [
@@ -118,7 +119,7 @@ export default function Customers() {
         >
           {COUNTRIES.map((c) => (
             <option key={c} value={c}>
-              {c === '全部' ? '全部国家' : c}
+              {c === '全部' ? '全部国家' : `${c}${hasProductPricing(c) ? ' *' : ''}`}
             </option>
           ))}
         </select>

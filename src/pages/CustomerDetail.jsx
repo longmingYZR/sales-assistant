@@ -12,6 +12,8 @@ import {
 } from '../db';
 import { FOLLOWUP_TYPES, STAGE_FOLLOWUP_TYPES, getIntervalDays } from '../utils/followupTypes';
 import { exportQuotationPDF } from '../utils/quotation';
+import { getCountryPricing, hasProductPricing } from '../utils/countryPricing';
+import CountryProductCards from '../components/CountryProductCards';
 
 const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置'];
 const COUNTRIES = [
@@ -50,6 +52,9 @@ export default function CustomerDetail() {
   const [confirmed, setConfirmed] = useState({ prices: false, bank: false, terms: false });
   const [bankInfo, setBankInfo] = useState('');
   const [template, setTemplate] = useState(null);
+  // Country pricing state
+  const [countryPricing, setCountryPricing] = useState(null);
+  const [countrySelectedSeqs, setCountrySelectedSeqs] = useState(new Set());
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
 
@@ -90,6 +95,10 @@ function getProductName(item) {
       stage: c.stage,
     });
     setFollowUps(await getFollowUps(c.id));
+    // Load country pricing data
+    const pricing = getCountryPricing(c.country);
+    setCountryPricing(pricing);
+    setCountrySelectedSeqs(new Set());
     setLoading(false);
   };
 
@@ -233,6 +242,64 @@ function getProductName(item) {
     );
   };
 
+  // --- Country product selection ---
+  const handleCountryToggleSelect = (product) => {
+    setCountrySelectedSeqs((prev) => {
+      const next = new Set(prev);
+      if (next.has(product.seq)) {
+        next.delete(product.seq);
+      } else {
+        next.add(product.seq);
+      }
+      return next;
+    });
+  };
+
+  const addCountryProductsToQuotation = () => {
+    if (!countryPricing || countrySelectedSeqs.size === 0) return;
+    // Build selected product objects compatible with quotation flow
+    const selected = countryPricing.products
+      .filter((p) => countrySelectedSeqs.has(p.seq))
+      .map((p) => {
+        // Find the FOB price key in the existing price list items
+        const item = {
+          _priceListId: 'country-' + countryPricing.country,
+          _rowIndex: p.seq,
+          _source: 'countryPricing',
+          ['型号']: p.model,
+          ['名称']: p.name,
+          ['FOB(USD)']: p.fob,
+          qty: 1,
+          columns: {},
+        };
+        // Attach all fields so quotation can use them
+        if (p.allFields) {
+          Object.entries(p.allFields).forEach(([k, v]) => {
+            item[k] = v;
+          });
+        }
+        // Pre-fill key price columns in the columns map
+        if (pricingModel === 'DDP' && p.ddp) {
+          item.columns['DDP价(USD)'] = p.ddp;
+        } else if (pricingModel === 'CIF' && p.cif) {
+          item.columns['CIF港口(USD)'] = p.cif;
+        }
+        if (p.oceanFreight) item.columns['海运费'] = p.oceanFreight;
+        return item;
+      });
+
+    setSelectedProducts((prev) => [...prev, ...selected]);
+    setCountrySelectedSeqs(new Set());
+    // Open quotation if not already open
+    if (quoteStep === 'idle') {
+      openQuotation();
+    } else {
+      setQuoteStep('select');
+    }
+  };
+
+  const pricingModel = countryPricing?.pricingModel || '';
+
   const updateField = (field, value) => setForm({ ...form, [field]: value });
 
   if (loading) return <div className="page"><p className="loading">加载中...</p></div>;
@@ -308,6 +375,48 @@ function getProductName(item) {
           {saving ? '保存中...' : '保存'}
         </button>
       </div>
+
+      {/* Country Product Cards */}
+      {!isNew && countryPricing && (
+        <section className="followup-section">
+          <div className="country-pricing-header">
+            <h3>产品报价 - {form.country}</h3>
+            <span className={`pricing-model-badge ${countryPricing.pricingModel === 'CIF' ? 'cif' : ''}`}>
+              {countryPricing.pricingModel}
+            </span>
+          </div>
+          {countryPricing.products.length > 0 ? (
+            <>
+              <CountryProductCards
+                products={countryPricing.products}
+                pricingModel={countryPricing.pricingModel}
+                selectedSeqSet={countrySelectedSeqs}
+                onToggleSelect={handleCountryToggleSelect}
+              />
+              <div className="country-pricing-actions">
+                <button
+                  className="btn btn-primary btn-full"
+                  disabled={countrySelectedSeqs.size === 0}
+                  onClick={addCountryProductsToQuotation}
+                >
+                  {countrySelectedSeqs.size > 0
+                    ? `将选中的 ${countrySelectedSeqs.size} 个产品加入报价单`
+                    : '请选择产品加入报价单'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="country-pricing-hint">暂无产品数据</p>
+          )}
+        </section>
+      )}
+
+      {!isNew && countryPricing === null && hasProductPricing(form.country) === false && (
+        <section className="followup-section">
+          <h3>产品报价 - {form.country}</h3>
+          <p className="country-pricing-hint">暂无该国详细报价数据</p>
+        </section>
+      )}
 
       {!isNew && (
         <section className="followup-section">

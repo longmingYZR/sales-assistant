@@ -1034,6 +1034,176 @@ body {
   accent-color: var(--accent);
 }
 
+/* === Country Product Cards === */
+.country-pricing-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pricing-model-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent);
+}
+.pricing-model-badge.cif {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+}
+.country-pricing-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+}
+.country-product-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.country-product-card {
+  position: relative;
+  flex: 0 0 calc(50% - 5px);
+  min-width: 0;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.country-product-card:active {
+  transform: scale(0.97);
+}
+.country-product-card.selected {
+  border-color: var(--accent);
+  background: rgba(74, 158, 255, 0.08);
+}
+.country-product-card .card-check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.country-product-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.card-category {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.card-category.cat-truck { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+.card-category.cat-minetruck { background: rgba(33, 150, 243, 0.2); color: #2196f3; }
+.card-category.cat-excavator { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+.card-category.cat-crusher { background: rgba(156, 39, 176, 0.2); color: #9c27b0; }
+.card-category.cat-screen { background: rgba(0, 188, 212, 0.2); color: #00bcd4; }
+.card-category.cat-drill { background: rgba(255, 87, 34, 0.2); color: #ff5722; }
+.card-category.cat-other { background: rgba(158, 158, 158, 0.2); color: #9e9e9e; }
+.country-product-card .card-model {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Cascadia Code', monospace;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.country-product-card .card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.country-product-card .card-specs {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.country-product-card .card-prices {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+.price-label {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.price-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.price-row.price-freight .price-value {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.price-row.price-final .price-value {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+.card-expand-btn {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 3px 0;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  text-align: center;
+}
+.card-detail {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  max-height: 150px;
+  overflow-y: auto;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 1.6;
+  gap: 8px;
+}
+.detail-key {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.detail-val {
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-all;
+}
+.country-pricing-actions {
+  margin-top: 12px;
+}
+
 /* === Responsive (wider screens) === */
 @media (min-width: 481px) {
   .app-container {
