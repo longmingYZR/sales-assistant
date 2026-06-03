@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'salesAssistant';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbPromise = null;
 
@@ -40,6 +40,10 @@ async function getDB() {
         if (oldVersion < 4) {
           db.createObjectStore('priceLists', { keyPath: 'id', autoIncrement: true });
           db.createObjectStore('templates', { keyPath: 'id', autoIncrement: true });
+        }
+        if (oldVersion < 5) {
+          const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
+          convStore.createIndex('updatedAt', 'updatedAt');
         }
       },
       blocked() {
@@ -202,4 +206,37 @@ export async function addTemplate(tpl) {
 export async function deleteTemplate(id) {
   const db = await getDB();
   return db.delete('templates', id);
+}
+
+// --- Conversations ---
+
+export async function getAllConversations() {
+  const db = await getDB();
+  const all = await db.getAll('conversations');
+  all.sort((a, b) => b.updatedAt - a.updatedAt);
+  return all;
+}
+
+export async function getConversation(id) {
+  const db = await getDB();
+  return db.get('conversations', id);
+}
+
+export async function addConversation(conv) {
+  const db = await getDB();
+  const now = Date.now();
+  return db.add('conversations', { ...conv, createdAt: now, updatedAt: now });
+}
+
+export async function updateConversation(id, changes) {
+  const db = await getDB();
+  const conv = await db.get('conversations', id);
+  if (!conv) return;
+  Object.assign(conv, changes, { updatedAt: Date.now() });
+  return db.put('conversations', conv);
+}
+
+export async function deleteConversation(id) {
+  const db = await getDB();
+  return db.delete('conversations', id);
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllCustomers, getAllFollowUps, getLastFollowUp } from '../db';
+import { getAllCustomers, getAllFollowUps, getLastFollowUp, getAllConversations } from '../db';
 import { analyzePriority, analyzeDealPatterns, askAboutCustomers } from '../utils/analysis';
 import { FOLLOWUP_TYPES, getCategoryForType, getIntervalDays, CATEGORY_CONFIG } from '../utils/followupTypes';
 
@@ -23,6 +23,8 @@ export default function Dashboard() {
   const [askInput, setAskInput] = useState('');
   const [askResult, setAskResult] = useState('');
   const [askLoading, setAskLoading] = useState(false);
+
+  const [recentConversations, setRecentConversations] = useState([]);
 
   const askEndRef = useRef(null);
   const navigate = useNavigate();
@@ -78,6 +80,9 @@ export default function Dashboard() {
     setCategorized(groups);
     setTotalOverdue(total);
     setStageCounts(counts);
+
+    getAllConversations().then((all) => setRecentConversations(all.slice(0, 3))).catch(() => {});
+
     setLoading(false);
   };
 
@@ -205,6 +210,57 @@ export default function Dashboard() {
       {/* ===== 智能分析区 ===== */}
       <section className="dashboard-section">
         <h3 className="section-title">智能分析</h3>
+
+        {/* 需求分析助手 */}
+        <div className="analysis-card" style={{ cursor: 'pointer' }} onClick={() => navigate('/assistant')}>
+          <div className="analysis-card-header">
+            <span>AI 需求梳理</span>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={(e) => { e.stopPropagation(); navigate('/assistant'); }}
+            >
+              开始分析
+            </button>
+          </div>
+          <p className="hint">
+            输入模糊的项目需求，AI 会通过多轮提问帮你理清客户需求，
+            并生成具体的报价、型号推荐和技术方案。
+          </p>
+          {recentConversations.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span className="hint">最近对话</span>
+                <button
+                  className="btn btn-back btn-sm"
+                  onClick={(e) => { e.stopPropagation(); navigate('/assistant'); }}
+                >
+                  查看全部 →
+                </button>
+              </div>
+              {recentConversations.map((c) => (
+                <div
+                  key={c.id}
+                  className="doc-item"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/assistant/${c.id}`); }}
+                  style={{ marginBottom: 4 }}
+                >
+                  <div className="doc-info">
+                    <span className="doc-name">{c.title}</span>
+                    <span className="doc-size">
+                      {new Date(c.updatedAt).toLocaleDateString('zh-CN')} · {c.messages?.length || 0} 条消息
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/assistant/${c.id}`); }}
+                  >
+                    继续
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* 3.1 周优先级排序 */}
         <div className="analysis-card">
