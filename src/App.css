@@ -1304,6 +1304,84 @@ body {
   margin-top: 12px;
 }
 
+/* === GitHub Sync === */
+.sync-config .form {
+  gap: 8px;
+}
+
+.sync-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sync-status-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.sync-status-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.sync-status-text strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.sync-error {
+  padding: 8px 12px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.sync-success {
+  padding: 8px 12px;
+  background: rgba(76, 175, 132, 0.15);
+  color: var(--success);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.sync-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sync-actions .btn {
+  flex-shrink: 0;
+}
+
+.sync-log {
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+}
+
+.sync-log-line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: 1.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* === Responsive (wider screens) === */
 @media (min-width: 481px) {
   .app-container {

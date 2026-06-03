@@ -5,7 +5,7 @@ const DB_VERSION = 5;
 
 let dbPromise = null;
 
-async function getDB() {
+export async function getDB() {
   if (dbPromise) return dbPromise;
 
   try {
