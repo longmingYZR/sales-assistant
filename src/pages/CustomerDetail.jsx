@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getCustomer,
+  getCustomerRaw,
   addCustomer,
   updateCustomer,
   deleteCustomer,
+  restoreCustomer,
   getFollowUps,
   addFollowUp,
   getAllPriceLists,
@@ -60,6 +62,7 @@ export default function CustomerDetail() {
   const [newFollowUp, setNewFollowUp] = useState('');
   const [followUpType, setFollowUpType] = useState('visit');
   const [saving, setSaving] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   // Quotation flow states
   const [quoteStep, setQuoteStep] = useState('idle'); // idle | select | confirm
@@ -134,8 +137,16 @@ function isProductRow(item) {
   }, [form.stage]);
 
   const loadCustomer = async () => {
-    const c = await getCustomer(Number(id));
-    if (!c) { navigate('/customers'); return; }
+    let c = await getCustomer(Number(id));
+    // 如果已删除，尝试获取原始记录以显示恢复界面
+    if (!c) {
+      c = await getCustomerRaw(Number(id));
+      if (c && c._deleted) {
+        setIsDeleted(true);
+      } else {
+        navigate('/customers'); return;
+      }
+    }
     setForm({
       companyName: c.companyName,
       contactName: c.contactName || '',
@@ -180,9 +191,28 @@ function isProductRow(item) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('确定删除此客户及所有跟进记录？')) return;
+    if (!window.confirm('确定删除此客户？可在客户列表筛选「已删除」中恢复。')) return;
     await deleteCustomer(Number(id));
     navigate('/customers');
+  };
+
+  const handleRestore = async () => {
+    await restoreCustomer(Number(id));
+    setIsDeleted(false);
+    // 刷新以获取正常数据
+    const c = await getCustomer(Number(id));
+    if (c) {
+      setForm({
+        companyName: c.companyName,
+        contactName: c.contactName || '',
+        country: c.country,
+        needs: c.needs || '',
+        stage: c.stage,
+        amount: c.amount || 0,
+        opportunityId: c.opportunityId || '',
+        status: c.status || '有效',
+      });
+    }
   };
 
   // --- New Quotation Flow ---
@@ -374,11 +404,26 @@ function isProductRow(item) {
           ← 返回
         </button>
         {!isNew && (
-          <button className="btn btn-danger btn-sm" onClick={handleDelete}>
-            删除客户
-          </button>
+          {isDeleted ? (
+            <button className="btn btn-primary btn-sm" onClick={handleRestore}>
+              恢复客户
+            </button>
+          ) : (
+            <button className="btn btn-danger btn-sm" onClick={handleDelete}>
+              删除客户
+            </button>
+          )}
         )}
       </div>
+
+      {isDeleted && (
+        <div className="restore-banner">
+          <span>此客户已被删除，可在客户列表「已删除」筛选中找到</span>
+          <button className="btn btn-primary btn-sm" onClick={handleRestore}>
+            恢复客户
+          </button>
+        </div>
+      )}
 
       <h2 className="page-title">{isNew ? '新增客户' : form.companyName || '客户详情'}</h2>
 

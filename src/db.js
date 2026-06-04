@@ -63,10 +63,32 @@ export async function getDB() {
 
 export async function getAllCustomers() {
   const db = await getDB();
+  const all = await db.getAll('customers');
+  return all.filter((c) => !c._deleted);
+}
+
+/** 包含已删除的客户（同步导出用） */
+export async function getAllCustomersRaw() {
+  const db = await getDB();
   return db.getAll('customers');
 }
 
 export async function getCustomer(id) {
+  const db = await getDB();
+  const c = await db.get('customers', id);
+  if (c && c._deleted) return null;
+  return c;
+}
+
+/** 获取已删除的客户列表（回收站） */
+export async function getDeletedCustomers() {
+  const db = await getDB();
+  const all = await db.getAll('customers');
+  return all.filter((c) => c._deleted);
+}
+
+/** 获取客户（含已删除，用于详情页查看回收站记录） */
+export async function getCustomerRaw(id) {
   const db = await getDB();
   return db.get('customers', id);
 }
@@ -87,11 +109,20 @@ export async function updateCustomer(id, changes) {
 
 export async function deleteCustomer(id) {
   const db = await getDB();
-  await db.delete('customers', id);
-  const allFollowUps = await db.getAllFromIndex('followUps', 'customerId', id);
-  for (const f of allFollowUps) {
-    await db.delete('followUps', f.id);
-  }
+  const customer = await db.get('customers', id);
+  if (!customer) return;
+  customer._deleted = true;
+  customer.updatedAt = Date.now();
+  await db.put('customers', customer);
+}
+
+export async function restoreCustomer(id) {
+  const db = await getDB();
+  const customer = await db.get('customers', id);
+  if (!customer || !customer._deleted) return;
+  delete customer._deleted;
+  customer.updatedAt = Date.now();
+  await db.put('customers', customer);
 }
 
 // --- Follow-ups ---

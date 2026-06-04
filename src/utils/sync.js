@@ -15,6 +15,7 @@
 
 import {
   getAllCustomers,
+  getAllCustomersRaw,
   getAllFollowUps,
   getAllDocuments,
   getAllPriceLists,
@@ -75,7 +76,7 @@ function setLastSyncAt(ts) {
 const STORE_NAMES = ['customers', 'followUps', 'documents', 'priceLists', 'templates', 'conversations'];
 
 const STORE_READERS = {
-  customers:     getAllCustomers,
+  customers:     getAllCustomersRaw, // 包含墓碑，让其他设备知道删除操作
   followUps:     getAllFollowUps,
   documents:     getAllDocuments,
   priceLists:    getAllPriceLists,

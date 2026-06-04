@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllCustomers, getAllFollowUps, getLastFollowUp } from '../db';
+import { getAllCustomers, getAllFollowUps, getLastFollowUp, getDeletedCustomers, restoreCustomer } from '../db';
 import { detectZombieCustomers } from '../utils/analysis';
 import { getIntervalDays, FOLLOWUP_TYPES } from '../utils/followupTypes';
 import { hasProductPricing } from '../utils/countryPricing';
 
-const STAGES = ['全部', '初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '商机关闭', '低活跃'];
+const STAGES = ['全部', '初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '商机关闭', '低活跃', '已删除'];
 const COUNTRIES = [
   '全部', '墨西哥', '巴西', '阿根廷', '哥伦比亚', '智利', '秘鲁',
   '厄瓜多尔', '多米尼加', '危地马拉', '巴拿马', '哥斯达黎加',
@@ -25,6 +25,8 @@ export default function Customers() {
   const [lastFollowUpMap, setLastFollowUpMap] = useState({});
   const [zombieIds, setZombieIds] = useState(new Set());
   const [zombieMap, setZombieMap] = useState({});
+  const [deletedCustomers, setDeletedCustomers] = useState([]);
+  const [restoringId, setRestoringId] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -83,11 +85,25 @@ export default function Customers() {
     setZombieIds(zIds);
     setZombieMap(zMap);
 
+    // 预加载已删除客户（回收站数量）
+    getDeletedCustomers().then((d) => setDeletedCustomers(d)).catch(() => {});
+
     setLoading(false);
   };
 
+  const handleRestore = async (id, e) => {
+    e.stopPropagation();
+    setRestoringId(id);
+    await restoreCustomer(id);
+    // 刷新列表
+    const [live, del] = await Promise.all([getAllCustomers(), getDeletedCustomers()]);
+    setCustomers(live.sort((a, b) => b.updatedAt - a.updatedAt));
+    setDeletedCustomers(del);
+    setRestoringId(null);
+  };
+
   useEffect(() => {
-    let result = customers;
+    let result = stageFilter === '已删除' ? deletedCustomers : customers;
 
     // 搜索：匹配客户名称、商机编号、联系人
     if (searchQuery.trim()) {
@@ -99,17 +115,19 @@ export default function Customers() {
       );
     }
 
-    if (stageFilter === '低活跃') {
+    if (stageFilter === '已删除') {
+      // 已删除模式：不做阶段/国家筛选，直接显示
+    } else if (stageFilter === '低活跃') {
       result = result.filter((c) => zombieIds.has(c.id));
     } else if (stageFilter !== '全部') {
       result = result.filter((c) => c.stage === stageFilter);
     }
 
-    if (countryFilter !== '全部') {
+    if (stageFilter !== '已删除' && countryFilter !== '全部') {
       result = result.filter((c) => c.country === countryFilter);
     }
     setFiltered(result);
-  }, [customers, stageFilter, countryFilter, zombieIds, searchQuery]);
+  }, [customers, deletedCustomers, stageFilter, countryFilter, zombieIds, searchQuery]);
 
   if (loading) return <div className="page"><p className="loading">加载中...</p></div>;
 
@@ -138,7 +156,7 @@ export default function Customers() {
         >
           {STAGES.map((s) => (
             <option key={s} value={s}>
-              {s === '全部' ? '全部阶段' : s === '低活跃' ? `低活跃 (${zombieIds.size})` : s}
+              {s === '全部' ? '全部阶段' : s === '低活跃' ? `低活跃 (${zombieIds.size})` : s === '已删除' ? `已删除 (${deletedCustomers.length})` : s}
             </option>
           ))}
         </select>
@@ -160,12 +178,13 @@ export default function Customers() {
       ) : (
         <ul className="customer-list">
           {filtered.map((c) => {
-            const isZombie = zombieIds.has(c.id);
+            const isDeleted = c._deleted === true;
+            const isZombie = !isDeleted && zombieIds.has(c.id);
             const zInfo = zombieMap[c.id];
             return (
               <li
                 key={c.id}
-                className={`customer-card ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''}`}
+                className={`customer-card ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''} ${isDeleted ? 'deleted' : ''}`}
                 onClick={() => navigate(`/customers/${c.id}`)}
               >
                 <div className="card-top">
@@ -188,12 +207,23 @@ export default function Customers() {
                     {lastFollowUpMap[c.id].content.length > 80 ? '...' : ''}
                   </p>
                 )}
-                {overdueIds.has(c.id) && (
+                {isDeleted && (
+                  <div className="deleted-actions">
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={(e) => handleRestore(c.id, e)}
+                      disabled={restoringId === c.id}
+                    >
+                      {restoringId === c.id ? '恢复中...' : '恢复'}
+                    </button>
+                  </div>
+                )}
+                {!isDeleted && overdueIds.has(c.id) && (
                   <span className="overdue-tag">
                     {overdueInfo[c.id]?.label}超{overdueInfo[c.id]?.daysOverdue}天
                   </span>
                 )}
-                {isZombie && zInfo && (
+                {!isDeleted && isZombie && zInfo && (
                   <div className="zombie-info">
                     <span className="zombie-tag">低活跃</span>
                     <span className="zombie-reason">{zInfo.zombieReasons.join(' · ')}</span>

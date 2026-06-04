@@ -356,6 +356,33 @@ body {
   white-space: nowrap;
 }
 
+.customer-card.deleted {
+  opacity: 0.7;
+  border-left: 3px solid var(--text-muted);
+}
+
+.deleted-actions {
+  margin-top: 8px;
+}
+
+.restore-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  font-size: var(--font-size-sm);
+  color: #856404;
+}
+
+.restore-banner .btn {
+  flex-shrink: 0;
+}
+
 .card-last-fu .fu-label {
   display: inline-block;
   font-size: var(--font-size-xs);
