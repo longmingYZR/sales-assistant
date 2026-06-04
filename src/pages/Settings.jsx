@@ -245,11 +245,15 @@ export default function Settings() {
                   <div>
                     <label className="form-label">GitHub Personal Access Token</label>
                     <input
-                      type="password"
+                      type="text"
                       className="input"
                       value={syncToken}
                       onChange={(e) => setSyncToken(e.target.value)}
                       placeholder="ghp_..."
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                     />
                     <p className="hint">
                       建议使用 <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Fine-grained token</a>，
