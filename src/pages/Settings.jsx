@@ -22,6 +22,9 @@ export default function Settings() {
   const [apiKey, setApiKey] = useState('');
   const [provider, setProvider] = useState('claude');
   const [intervals, setIntervals] = useState({});
+  const [closedReviewDays, setClosedReviewDays] = useState(() =>
+    Number(localStorage.getItem('closedReviewDays')) || 30
+  );
   const [saved, setSaved] = useState(false);
   const [showIntervals, setShowIntervals] = useState(false);
   const [showSync, setShowSync] = useState(false);
@@ -227,6 +230,22 @@ export default function Settings() {
                 <span className="hint">天</span>
               </div>
             ))}
+            <div className="input-row interval-row" style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
+              <label className="interval-label" style={{ fontWeight: 600 }}>已关闭商机回顾</label>
+              <input
+                type="number"
+                className="input short"
+                value={closedReviewDays}
+                onChange={(e) => {
+                  const days = Math.max(7, Math.min(90, Number(e.target.value) || 30));
+                  setClosedReviewDays(days);
+                  localStorage.setItem('closedReviewDays', String(days));
+                }}
+                min={7}
+                max={90}
+              />
+              <span className="hint">天</span>
+            </div>
           </div>
         )}
       </section>

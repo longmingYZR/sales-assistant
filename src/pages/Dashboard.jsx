@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [askResult, setAskResult] = useState('');
   const [askLoading, setAskLoading] = useState(false);
 
+  const [closedForReview, setClosedForReview] = useState([]);
   const [recentConversations, setRecentConversations] = useState([]);
 
   const askEndRef = useRef(null);
@@ -77,11 +78,23 @@ export default function Dashboard() {
 
     const total = Object.values(groups).reduce((s, arr) => s + arr.length, 0);
 
+    // 已关闭商机回顾：超过配置天数未查看的关闭商机
+    const reviewDays = Number(localStorage.getItem('closedReviewDays')) || 30;
+    const reviewList = customers
+      .filter((c) => (c.status === '结束' || c.stage === '商机关闭')
+        && (now - c.updatedAt) > reviewDays * DAY)
+      .map((c) => ({
+        ...c,
+        daysSinceReview: Math.floor((now - c.updatedAt) / DAY),
+      }))
+      .sort((a, b) => a.updatedAt - b.updatedAt);
+
     setAllCustomers(customers);
     setAllFollowUps(fu);
     setCategorized(groups);
     setTotalOverdue(total);
     setStageCounts(counts);
+    setClosedForReview(reviewList);
 
     getAllConversations().then((all) => setRecentConversations(all.slice(0, 3))).catch(() => {});
 
@@ -191,6 +204,33 @@ export default function Dashboard() {
           })
         )}
       </section>
+
+      {/* 已关闭商机回顾 */}
+      {closedForReview.length > 0 && (
+        <section className="dashboard-section">
+          <h3 className="section-title" style={{ color: 'var(--text-muted)' }}>
+            已关闭商机回顾 ({closedForReview.length})
+          </h3>
+          <ul className="overdue-list">
+            {closedForReview.map((c) => (
+              <li
+                key={c.id}
+                className="overdue-item closed-review-item"
+                onClick={() => navigate(`/customers/${c.id}`)}
+              >
+                <div className="overdue-info">
+                  <strong>{c.companyName}</strong>
+                  <span>{c.country}</span>
+                  <span className="overdue-type-info" style={{ color: 'var(--text-muted)' }}>
+                    {c.stage} · {c.daysSinceReview}天未查看
+                  </span>
+                </div>
+                <span className="stage-badge" style={{ opacity: 0.6 }}>{c.status}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* 阶段统计 */}
       <section className="dashboard-section">
