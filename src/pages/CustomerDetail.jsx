@@ -15,11 +15,12 @@ import { exportQuotationPDF } from '../utils/quotation';
 import { getCountryPricing, hasProductPricing } from '../utils/countryPricing';
 import CountryProductCards from '../components/CountryProductCards';
 
-const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置'];
+const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '商机关闭'];
 const COUNTRIES = [
   '墨西哥', '巴西', '阿根廷', '哥伦比亚', '智利', '秘鲁',
   '厄瓜多尔', '多米尼加', '危地马拉', '巴拿马', '哥斯达黎加',
   '乌拉圭', '巴拉圭', '玻利维亚', '洪都拉斯', '萨尔瓦多', '尼加拉瓜',
+  '美国', '加拿大', '巴巴多斯',
 ];
 
 const emptyForm = {
@@ -28,6 +29,9 @@ const emptyForm = {
   country: '墨西哥',
   needs: '',
   stage: '初接触',
+  amount: 0,
+  opportunityId: '',
+  status: '有效',
 };
 
 // Inline collapsible section component
@@ -134,10 +138,13 @@ function isProductRow(item) {
     if (!c) { navigate('/customers'); return; }
     setForm({
       companyName: c.companyName,
-      contactName: c.contactName,
+      contactName: c.contactName || '',
       country: c.country,
-      needs: c.needs,
+      needs: c.needs || '',
       stage: c.stage,
+      amount: c.amount || 0,
+      opportunityId: c.opportunityId || '',
+      status: c.status || '有效',
     });
     setFollowUps(await getFollowUps(c.id));
     // Load country pricing data
@@ -419,6 +426,35 @@ function isProductRow(item) {
             {STAGES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
+          </select>
+
+          <label className="form-label">商机编号</label>
+          <input
+            className="input"
+            value={form.opportunityId}
+            onChange={(e) => updateField('opportunityId', e.target.value)}
+            placeholder="如 ZP2600460400"
+          />
+
+          <label className="form-label">商机金额 (USD)</label>
+          <input
+            className="input"
+            type="number"
+            value={form.amount || ''}
+            onChange={(e) => updateField('amount', parseFloat(e.target.value) || 0)}
+            placeholder="0"
+            min="0"
+            step="any"
+          />
+
+          <label className="form-label">状态</label>
+          <select
+            className="select"
+            value={form.status}
+            onChange={(e) => updateField('status', e.target.value)}
+          >
+            <option value="有效">有效</option>
+            <option value="结束">结束</option>
           </select>
 
           <label className="form-label">需求描述</label>

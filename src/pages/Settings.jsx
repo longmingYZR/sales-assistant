@@ -25,6 +25,9 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [showIntervals, setShowIntervals] = useState(false);
   const [showSync, setShowSync] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   // ── Sync state ──
   const [syncCfg, setSyncCfg] = useState(() => getSyncConfig());
@@ -146,6 +149,23 @@ export default function Settings() {
     setSyncLog([]);
     setSyncError('');
     setLastSync(0);
+  };
+
+  // ── Import handler ──
+
+  const handleImportInitial = async () => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const { importCustomers } = await import('../utils/importCustomers');
+      const initialData = (await import('../data/initialCustomers')).default;
+      const count = await importCustomers(initialData);
+      setImportResult({ success: true, message: `成功导入 ${count} 条客户记录` });
+    } catch (e) {
+      setImportResult({ success: false, message: `导入失败: ${e.message}` });
+    } finally {
+      setImporting(false);
+    }
   };
 
   const addLog = (msg) => {
@@ -356,6 +376,33 @@ export default function Settings() {
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── 数据导入 ── */}
+      <section className="settings-section">
+        <div className="collapse-header" onClick={() => setShowImport(!showImport)}>
+          <h3 style={{ marginBottom: 0 }}>数据导入</h3>
+          <span className={`collapse-arrow ${showImport ? 'open' : ''}`}>▶</span>
+        </div>
+        {showImport && (
+          <div className="collapse-body" style={{ marginTop: 10 }}>
+            <p className="hint" style={{ marginBottom: 12 }}>
+              导入初始商机客户数据（50条记录）。已存在的客户不会重复导入。
+            </p>
+            <button
+              className="btn btn-primary btn-full"
+              onClick={handleImportInitial}
+              disabled={importing}
+            >
+              {importing ? '导入中...' : '导入初始客户数据'}
+            </button>
+            {importResult && (
+              <p className={`hint ${importResult.success ? 'success' : ''}`} style={{ marginTop: 8, color: importResult.success ? 'var(--success)' : 'var(--danger)' }}>
+                {importResult.message}
+              </p>
             )}
           </div>
         )}

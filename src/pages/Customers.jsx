@@ -5,11 +5,12 @@ import { detectZombieCustomers } from '../utils/analysis';
 import { getIntervalDays, FOLLOWUP_TYPES } from '../utils/followupTypes';
 import { hasProductPricing } from '../utils/countryPricing';
 
-const STAGES = ['全部', '初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '低活跃'];
+const STAGES = ['全部', '初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '商机关闭', '低活跃'];
 const COUNTRIES = [
   '全部', '墨西哥', '巴西', '阿根廷', '哥伦比亚', '智利', '秘鲁',
   '厄瓜多尔', '多米尼加', '危地马拉', '巴拿马', '哥斯达黎加',
   '乌拉圭', '巴拉圭', '玻利维亚', '洪都拉斯', '萨尔瓦多', '尼加拉瓜',
+  '美国', '加拿大', '巴巴多斯',
 ];
 
 export default function Customers() {
@@ -147,8 +148,10 @@ export default function Customers() {
                 <div className="card-mid">
                   <span>{c.contactName}</span>
                   <span>{c.country}</span>
+                  {c.opportunityId && <span className="card-opp-id">{c.opportunityId}</span>}
                 </div>
                 {c.needs && <p className="card-needs">{c.needs}</p>}
+                {c.amount > 0 && <p className="card-amount">$ {c.amount.toLocaleString()}</p>}
                 {overdueIds.has(c.id) && (
                   <span className="overdue-tag">
                     {overdueInfo[c.id]?.label}超{overdueInfo[c.id]?.daysOverdue}天

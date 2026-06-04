@@ -334,6 +334,19 @@ body {
   white-space: nowrap;
 }
 
+.card-opp-id {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.card-amount {
+  font-size: var(--font-size-base);
+  color: var(--success);
+  font-weight: 600;
+  margin: 2px 0 0 0;
+}
+
 .overdue-tag {
   display: inline-block;
   font-size: var(--font-size-xs);

@@ -68,7 +68,7 @@ export function detectZombieCustomers(customers, followUps) {
   const zombies = [];
 
   for (const c of customers) {
-    if (c.stage === '成交' || c.stage === '搁置') continue;
+    if (c.stage === '成交' || c.stage === '搁置' || c.stage === '商机关闭') continue;
 
     const records = followUps
       .filter((f) => f.customerId === c.id)

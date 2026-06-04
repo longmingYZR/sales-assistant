@@ -4,7 +4,7 @@ import { getAllCustomers, getAllFollowUps, getLastFollowUp, getAllConversations 
 import { analyzePriority, analyzeDealPatterns, askAboutCustomers } from '../utils/analysis';
 import { FOLLOWUP_TYPES, getCategoryForType, getIntervalDays, CATEGORY_CONFIG } from '../utils/followupTypes';
 
-const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置'];
+const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '商机关闭'];
 
 export default function Dashboard() {
   const [categorized, setCategorized] = useState({ urgent: [], waiting: [], progressing: [], routine: [] });

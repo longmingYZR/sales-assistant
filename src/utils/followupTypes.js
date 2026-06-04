@@ -15,6 +15,7 @@ export const STAGE_FOLLOWUP_TYPES = {
   '谈判中': ['negotiation', 'payment', 'feedback', 'other'],
   '成交': ['payment', 'maintain', 'other'],
   '搁置': ['maintain', 'other'],
+  '商机关闭': ['maintain', 'other'],
 };
 
 // Type → dashboard category
