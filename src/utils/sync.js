@@ -423,14 +423,11 @@ export async function syncAll(onProgress = () => {}) {
     ...fullData,
   };
 
-  // 获取自己旧快照的 SHA（如果存在）
+  // 获取自己旧快照的 SHA（目录列表已包含 sha，无需额外请求）
   let ownSha = null;
   const ownFile = files.find(f => f.name === `${deviceId}.json`);
   if (ownFile) {
-    try {
-      const own = await readRemoteSnapshot(ownFile.path, token, repo);
-      if (own) ownSha = own.sha;
-    } catch { /* 忽略 */ }
+    ownSha = ownFile.sha; // 直接从目录列表取，避免再读文件内容（可能 JSON 解析失败）
   }
 
   // 重试写入（处理 409 冲突）
