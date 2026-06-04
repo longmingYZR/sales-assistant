@@ -45,6 +45,8 @@ export default function Dashboard() {
 
     for (const c of customers) {
       counts[c.stage] = (counts[c.stage] || 0) + 1;
+      // 已关闭商机不进入需跟进列表
+      if (c.status === '结束' || c.stage === '商机关闭') continue;
       const lastFU = await getLastFollowUp(c.id);
       const lastDate = lastFU ? lastFU.date : 0;
       const lastType = lastFU ? lastFU.type : 'visit';
