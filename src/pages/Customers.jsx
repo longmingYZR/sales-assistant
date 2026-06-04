@@ -19,6 +19,7 @@ export default function Customers() {
   const [filtered, setFiltered] = useState([]);
   const [stageFilter, setStageFilter] = useState('全部');
   const [countryFilter, setCountryFilter] = useState('全部');
+  const [searchQuery, setSearchQuery] = useState('');
   const [overdueIds, setOverdueIds] = useState(new Set());
   const [overdueInfo, setOverdueInfo] = useState({});
   const [zombieIds, setZombieIds] = useState(new Set());
@@ -78,6 +79,16 @@ export default function Customers() {
   useEffect(() => {
     let result = customers;
 
+    // 搜索：匹配客户名称、商机编号、联系人
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((c) =>
+        c.companyName?.toLowerCase().includes(q) ||
+        c.opportunityId?.toLowerCase().includes(q) ||
+        c.contactName?.toLowerCase().includes(q)
+      );
+    }
+
     if (stageFilter === '低活跃') {
       result = result.filter((c) => zombieIds.has(c.id));
     } else if (stageFilter !== '全部') {
@@ -88,7 +99,7 @@ export default function Customers() {
       result = result.filter((c) => c.country === countryFilter);
     }
     setFiltered(result);
-  }, [customers, stageFilter, countryFilter, zombieIds]);
+  }, [customers, stageFilter, countryFilter, zombieIds, searchQuery]);
 
   if (loading) return <div className="page"><p className="loading">加载中...</p></div>;
 
@@ -102,6 +113,14 @@ export default function Customers() {
       </div>
 
       <div className="filters">
+        <input
+          className="input"
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜索客户名称 / 商机编号 / 联系人..."
+          style={{ flex: 1, minWidth: 0 }}
+        />
         <select
           className="select"
           value={stageFilter}
