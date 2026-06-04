@@ -22,6 +22,7 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [overdueIds, setOverdueIds] = useState(new Set());
   const [overdueInfo, setOverdueInfo] = useState({});
+  const [lastFollowUpMap, setLastFollowUpMap] = useState({});
   const [zombieIds, setZombieIds] = useState(new Set());
   const [zombieMap, setZombieMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -47,8 +48,16 @@ export default function Customers() {
 
     const overdue = new Set();
     const oInfo = {};
+    const lastFUMap = {};
     for (const c of list) {
       const lastFU = await getLastFollowUp(c.id);
+      if (lastFU) {
+        lastFUMap[c.id] = {
+          content: lastFU.content,
+          date: lastFU.date,
+          type: lastFU.type,
+        };
+      }
       const lastDate = lastFU ? lastFU.date : 0;
       const lastType = lastFU ? lastFU.type : 'visit';
       const intervalDays = getIntervalDays(lastType);
@@ -65,6 +74,7 @@ export default function Customers() {
     }
     setOverdueIds(overdue);
     setOverdueInfo(oInfo);
+    setLastFollowUpMap(lastFUMap);
 
     const zombies = detectZombieCustomers(list, fuList);
     const zIds = new Set(zombies.map((z) => z.id));
@@ -171,6 +181,13 @@ export default function Customers() {
                 </div>
                 {c.needs && <p className="card-needs">{c.needs}</p>}
                 {c.amount > 0 && <p className="card-amount">$ {c.amount.toLocaleString()}</p>}
+                {lastFollowUpMap[c.id] && (
+                  <p className="card-last-fu">
+                    <span className="fu-label">{FOLLOWUP_TYPES[lastFollowUpMap[c.id].type]?.label || '跟进'}</span>
+                    {lastFollowUpMap[c.id].content.slice(0, 80)}
+                    {lastFollowUpMap[c.id].content.length > 80 ? '...' : ''}
+                  </p>
+                )}
                 {overdueIds.has(c.id) && (
                   <span className="overdue-tag">
                     {overdueInfo[c.id]?.label}超{overdueInfo[c.id]?.daysOverdue}天
