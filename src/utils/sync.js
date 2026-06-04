@@ -256,6 +256,12 @@ async function githubApi(path, { method = 'GET', body, token, repo, sha } = {}) 
     throw new SyncError('GitHub Token 无效或权限不足', 'auth');
   }
   if (resp.status === 404) {
+    // 区分三种 404：仓库不存在 vs 空仓库 vs 路径不存在
+    const errBody = await resp.json().catch(() => ({}));
+    if (errBody.message === 'This repository is empty.' || errBody.message === 'Not Found') {
+      // 空仓库或路径不存在 → 返回 null，由上层处理（如 listSyncFiles 返回 []）
+      return null;
+    }
     throw new SyncError('仓库未找到，请检查仓库名称（格式: owner/repo）', 'repo');
   }
   if (resp.status === 409) {
