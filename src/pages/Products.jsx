@@ -354,7 +354,7 @@ export default function Products() {
 
       {/* ═══ 全局 AI 问答（可折叠 + 持久化）═══ */}
       {(docs.length > 0 || priceLists.length > 0 || templates.length > 0) && (
-        <section className="settings-section">
+        <section className="settings-section" style={{ borderTop: '2px solid var(--border)', marginTop: 24, paddingTop: 16 }}>
           <div className="collapse-header" onClick={() => setShowChat(!showChat)}>
             <h3 style={{ marginBottom: 0 }}>
               产品 AI 问答
