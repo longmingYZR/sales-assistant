@@ -18,10 +18,26 @@ export default function Products() {
   const fileInputRef = useRef(null);
 
   // ── Global Q&A state ──
-  const [chatMessages, setChatMessages] = useState([]);
+  const CHAT_STORAGE_KEY = 'productChatMessages';
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY)) || []; }
+    catch { return []; }
+  });
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
+
+  // 持久化聊天记录（最多 50 条）
+  useEffect(() => {
+    const trimmed = chatMessages.length > 50 ? chatMessages.slice(-50) : chatMessages;
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(trimmed));
+  }, [chatMessages]);
+
+  const clearChat = () => {
+    setChatMessages([]);
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+  };
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -336,55 +352,76 @@ export default function Products() {
         <p className="empty">暂无文件，请上传</p>
       ) : null}
 
-      {/* ═══ 全局 AI 问答 ═══ */}
+      {/* ═══ 全局 AI 问答（可折叠 + 持久化）═══ */}
       {(docs.length > 0 || priceLists.length > 0 || templates.length > 0) && (
-        <section className="products-chat-section">
-          <h3 className="section-title">产品 AI 问答</h3>
-          <p className="hint" style={{ marginBottom: 8 }}>
-            基于全部已上传文件，按问题类型智能搜索相关数据。按 Enter 发送。
-          </p>
-
-          <div className="chat-messages" style={{ maxHeight: 300, overflow: 'auto', marginBottom: 8 }}>
-            {chatMessages.length === 0 && (
-              <p className="hint" style={{ textAlign: 'center', padding: 16 }}>
-                试试问：ZMC300G 的排放标准是什么？ 或 这几款破碎机价格对比？
-              </p>
-            )}
-            {chatMessages.map((msg, i) => (
-              <div key={i} className={`chat-bubble ${msg.role}`}>
-                <div className="bubble-role">
-                  {msg.role === 'user' ? '你' : 'AI'}
-                </div>
-                <div className="bubble-text">{msg.text}</div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="chat-bubble assistant">
-                <div className="bubble-role">AI</div>
-                <div className="bubble-text typing">思考中...</div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
+        <section className="settings-section">
+          <div className="collapse-header" onClick={() => setShowChat(!showChat)}>
+            <h3 style={{ marginBottom: 0 }}>
+              产品 AI 问答
+              {chatMessages.length > 0 && !showChat && (
+                <span className="sync-badge" style={{ marginLeft: 8, fontSize: 11, color: 'var(--accent)' }}>
+                  {chatMessages.length} 条消息
+                </span>
+              )}
+            </h3>
+            <span className={`collapse-arrow ${showChat ? 'open' : ''}`}>▶</span>
           </div>
+          {showChat && (
+            <div className="collapse-body" style={{ marginTop: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <p className="hint" style={{ margin: 0 }}>
+                  基于全部已上传文件，按问题类型智能搜索。按 Enter 发送。
+                </p>
+                {chatMessages.length > 0 && (
+                  <button className="btn btn-sm" onClick={clearChat} style={{ fontSize: 'var(--font-size-xs)', flexShrink: 0, marginLeft: 8 }}>
+                    清空对话
+                  </button>
+                )}
+              </div>
 
-          <div className="chat-input-bar">
-            <textarea
-              className="input chat-input"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={handleChatKeyDown}
-              placeholder="输入问题，按 Enter 发送..."
-              rows={1}
-              disabled={chatLoading}
-            />
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleChatSend}
-              disabled={chatLoading || !chatInput.trim()}
-            >
-              发送
-            </button>
-          </div>
+              <div className="chat-messages" style={{ maxHeight: 400, overflow: 'auto', marginBottom: 8 }}>
+                {chatMessages.length === 0 && (
+                  <p className="hint" style={{ textAlign: 'center', padding: 16 }}>
+                    试试问：ZMC300G 的排放标准是什么？ 或 这几款破碎机价格对比？
+                  </p>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`chat-bubble ${msg.role}`}>
+                    <div className="bubble-role">
+                      {msg.role === 'user' ? '你' : 'AI'}
+                    </div>
+                    <div className="bubble-text">{msg.text}</div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="chat-bubble assistant">
+                    <div className="bubble-role">AI</div>
+                    <div className="bubble-text typing">思考中...</div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              <div className="chat-input-bar">
+                <textarea
+                  className="input chat-input"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={handleChatKeyDown}
+                  placeholder="输入问题，按 Enter 发送..."
+                  rows={1}
+                  disabled={chatLoading}
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleChatSend}
+                  disabled={chatLoading || !chatInput.trim()}
+                >
+                  发送
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>
