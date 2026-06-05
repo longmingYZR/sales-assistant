@@ -403,17 +403,15 @@ function isProductRow(item) {
         <button className="btn btn-back" onClick={() => navigate(-1)}>
           ← 返回
         </button>
-        {!isNew && (
-          {isDeleted ? (
-            <button className="btn btn-primary btn-sm" onClick={handleRestore}>
-              恢复客户
-            </button>
-          ) : (
-            <button className="btn btn-danger btn-sm" onClick={handleDelete}>
-              删除客户
-            </button>
-          )}
-        )}
+        {!isNew && (isDeleted ? (
+          <button className="btn btn-primary btn-sm" onClick={handleRestore}>
+            恢复客户
+          </button>
+        ) : (
+          <button className="btn btn-danger btn-sm" onClick={handleDelete}>
+            删除客户
+          </button>
+        ))}
       </div>
 
       {isDeleted && (
