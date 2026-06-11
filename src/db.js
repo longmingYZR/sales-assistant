@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'salesAssistant';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 let dbPromise = null;
 
@@ -44,6 +44,10 @@ export async function getDB() {
         if (oldVersion < 5) {
           const convStore = db.createObjectStore('conversations', { keyPath: 'id', autoIncrement: true });
           convStore.createIndex('updatedAt', 'updatedAt');
+        }
+        if (oldVersion < 7) {
+          db.createObjectStore('searchIndex', { keyPath: 'term' });
+          db.createObjectStore('searchMeta', { keyPath: 'key' });
         }
       },
       blocked() {
