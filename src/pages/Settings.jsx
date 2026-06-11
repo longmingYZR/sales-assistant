@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getProviders } from '../utils/ai';
 import { FOLLOWUP_TYPES } from '../utils/followupTypes';
 import {
@@ -7,6 +7,8 @@ import {
   clearSyncConfig,
   generateDeviceId,
   getLastSyncAt,
+  isAutoSyncEnabled,
+  setAutoSyncEnabled,
   syncAll,
   forcePull,
   forcePush,
@@ -41,6 +43,8 @@ export default function Settings() {
   const [syncLog, setSyncLog] = useState([]);
   const [syncError, setSyncError] = useState('');
   const [lastSync, setLastSync] = useState(() => getLastSyncAt());
+  const [autoSync, setAutoSync] = useState(() => isAutoSyncEnabled());
+  const [nextSyncIn, setNextSyncIn] = useState(null);
 
   const providers = getProviders();
   const currentProvider = providers.find((p) => p.id === provider) || providers[0];
@@ -63,6 +67,36 @@ export default function Settings() {
       setSyncDevName(cfg.deviceName);
     }
   }, []);
+
+  // ── 自动同步倒计时 ──
+  useEffect(() => {
+    if (!autoSync || !syncCfg.enabled) {
+      setNextSyncIn(null);
+      return;
+    }
+    const tick = () => {
+      const last = Number(localStorage.getItem('syncLastAt')) || 0;
+      if (!last) { setNextSyncIn(null); return; }
+      const elapsed = Date.now() - last;
+      const remain = Math.max(0, 5 * 60 * 1000 - elapsed);
+      setNextSyncIn(remain);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [autoSync, syncCfg.enabled]);
+
+  const handleToggleAutoSync = (val) => {
+    setAutoSyncEnabled(val);
+    setAutoSync(val);
+  };
+
+  function formatCountdown(ms) {
+    if (ms == null) return '';
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
 
   const saveApiKey = () => {
     localStorage.setItem('aiApiKey', apiKey.trim());
@@ -345,6 +379,19 @@ export default function Settings() {
                   <span className="sync-status-text">
                     上次同步: {lastSync ? formatSyncTime(lastSync) : '从未'}
                   </span>
+                </div>
+
+                {/* ── 自动同步开关 ── */}
+                <div className="auto-sync-row">
+                  <label className="toggle-label">
+                    <span>每 5 分钟自动同步</span>
+                    <div className={`toggle-switch ${autoSync ? 'on' : ''}`} onClick={() => handleToggleAutoSync(!autoSync)}>
+                      <div className="toggle-knob" />
+                    </div>
+                  </label>
+                  {autoSync && nextSyncIn != null && (
+                    <span className="auto-sync-countdown">下次同步: {formatCountdown(nextSyncIn)}</span>
+                  )}
                 </div>
 
                 {syncError && (

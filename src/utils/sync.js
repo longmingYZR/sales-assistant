@@ -29,11 +29,12 @@ import { getDB } from '../db';
 // 配置
 // ═══════════════════════════════════════════════
 
-const LS_TOKEN    = 'syncGithubToken';
-const LS_REPO     = 'syncRepo';
-const LS_DEVICE   = 'syncDeviceId';
-const LS_DEVNAME  = 'syncDeviceName';
-const LS_LAST     = 'syncLastAt';
+const LS_TOKEN     = 'syncGithubToken';
+const LS_REPO      = 'syncRepo';
+const LS_DEVICE    = 'syncDeviceId';
+const LS_DEVNAME   = 'syncDeviceName';
+const LS_LAST      = 'syncLastAt';
+const LS_AUTO_SYNC = 'syncAutoSync';
 
 export function getSyncConfig() {
   const token  = localStorage.getItem(LS_TOKEN);
@@ -59,6 +60,14 @@ export function generateDeviceId() {
   const id = 'dev-' + Math.random().toString(16).slice(2, 10);
   localStorage.setItem(LS_DEVICE, id);
   return id;
+}
+
+export function isAutoSyncEnabled() {
+  return localStorage.getItem(LS_AUTO_SYNC) !== 'false'; // 默认开启
+}
+
+export function setAutoSyncEnabled(enabled) {
+  localStorage.setItem(LS_AUTO_SYNC, enabled ? 'true' : 'false');
 }
 
 function getLastSyncAt() {
