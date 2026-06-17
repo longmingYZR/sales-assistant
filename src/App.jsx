@@ -8,6 +8,7 @@ import Products from './pages/Products';
 import ProductChat from './pages/ProductChat';
 import RequirementChat from './pages/RequirementChat';
 import ConversationList from './pages/ConversationList';
+import QuickQuote from './pages/QuickQuote';
 import Settings from './pages/Settings';
 import { getSyncConfig, isAutoSyncEnabled, syncAll } from './utils/sync';
 import './App.css';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/products/:id/chat" element={<ProductChat />} />
           <Route path="/assistant" element={<ConversationList />} />
           <Route path="/assistant/:id" element={<RequirementChat />} />
+          <Route path="/quick-quote" element={<QuickQuote />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
