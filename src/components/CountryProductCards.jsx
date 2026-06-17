@@ -41,10 +41,10 @@ export default function CountryProductCards({ products, onCopyProduct }) {
 
             <div className="card-name">{p.name}</div>
 
-            {/* FOB price — prominent */}
+            {/* FOB price ×1.15 — prominent */}
             {p.fob && (
               <div className="card-fob">
-                FOB <span className="card-fob-price">$ {Number(p.fob).toLocaleString('en-US')}</span>
+                FOB <span className="card-fob-price">$ {(Number(p.fob) * 1.15).toLocaleString('en-US')}</span>
               </div>
             )}
 

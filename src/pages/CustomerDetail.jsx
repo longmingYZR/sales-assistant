@@ -173,9 +173,10 @@ export default function CustomerDetail() {
   // --- Copy product info for logistics ---
   const handleCopyProduct = (product) => {
     const volume = calcVolume(product.dimensions);
+    const fob = getFOB(product);
     const text = [
       `${product.model}  ${product.name}`,
-      `FOB: $${Number(product.fob).toLocaleString('en-US')}`,
+      `FOB: $${fob.toLocaleString('en-US')}`,
       `尺寸: ${product.dimensions || '-'} mm`,
       `体积: ${formatVolume(volume)}`,
     ].join('\n');
@@ -193,28 +194,33 @@ export default function CustomerDetail() {
   };
 
   // --- CIF calculator helpers ---
+  const FOB_MARKUP = 1.15;
+  const getFOB = (p) => Number(p.fob) * FOB_MARKUP;
+
   const getFreight = (model) => {
     if (cifFreight[model] !== undefined && cifFreight[model] !== '') return Number(cifFreight[model]);
     return 0;
   };
 
-  const calcInsurance = (fob, freight) => (Number(fob) + freight) * 0.001;
+  const calcInsurance = (fob, freight) => (fob + freight) * 0.001;
 
-  const calcCIF = (fob, freight) => Number(fob) + freight + calcInsurance(fob, freight);
+  const calcCIF = (fob, freight) => fob + freight + calcInsurance(fob, freight);
 
   const totalCIF = countryPricing?.products.reduce((sum, p) => {
+    const fob = getFOB(p);
     const f = getFreight(p.model);
-    return sum + calcCIF(p.fob, f);
+    return sum + calcCIF(fob, f);
   }, 0) || 0;
 
   const handleCopyCIFSummary = () => {
     if (!countryPricing) return;
     const lines = ['CIF 报价汇总'];
     for (const p of countryPricing.products) {
+      const fob = getFOB(p);
       const f = getFreight(p.model);
-      const ins = calcInsurance(p.fob, f);
-      const cif = calcCIF(p.fob, f);
-      lines.push(`${p.model} ${p.name} | FOB: $${Number(p.fob).toLocaleString('en-US')} | 海运费: $${f.toLocaleString('en-US')} | 保险: $${ins.toFixed(2)} | CIF: $${cif.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+      const ins = calcInsurance(fob, f);
+      const cif = calcCIF(fob, f);
+      lines.push(`${p.model} ${p.name} | FOB: $${fob.toLocaleString('en-US')} | 海运费: $${f.toLocaleString('en-US')} | 保险: $${ins.toFixed(2)} | CIF: $${cif.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
     }
     lines.push(`总计 CIF: $${totalCIF.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
 
@@ -475,9 +481,10 @@ export default function CustomerDetail() {
 
           <div className="cif-product-list">
             {countryPricing.products.map((p) => {
+              const fob = getFOB(p);
               const freight = getFreight(p.model);
-              const insurance = calcInsurance(p.fob, freight);
-              const cif = calcCIF(p.fob, freight);
+              const insurance = calcInsurance(fob, freight);
+              const cif = calcCIF(fob, freight);
               const volume = calcVolume(p.dimensions);
 
               return (
@@ -489,7 +496,7 @@ export default function CustomerDetail() {
                   <div className="cif-fields">
                     <div className="cif-field">
                       <span className="cif-label">FOB</span>
-                      <span className="cif-value">$ {Number(p.fob).toLocaleString('en-US')}</span>
+                      <span className="cif-value">$ {fob.toLocaleString('en-US')}</span>
                     </div>
                     <div className="cif-field">
                       <span className="cif-label">体积</span>
