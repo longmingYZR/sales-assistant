@@ -34,6 +34,7 @@ const emptyForm = {
   amount: 0,
   opportunityId: '',
   status: '有效',
+  priority: '普通',
 };
 
 // Inline collapsible section component
@@ -156,6 +157,7 @@ function isProductRow(item) {
       amount: c.amount || 0,
       opportunityId: c.opportunityId || '',
       status: c.status || '有效',
+      priority: c.priority || '普通',
     });
     setFollowUps(await getFollowUps(c.id));
     // Load country pricing data
@@ -428,7 +430,7 @@ function isProductRow(item) {
       {/* Section 1: Customer Info */}
       <CollapsibleSection
         title="客户信息"
-        badge={form.stage}
+        badge={form.priority === '重点' ? '重点' : form.stage}
         collapsed={collapsedSections.has('customerInfo')}
         onToggle={() => toggleSection('customerInfo')}
       >
@@ -498,6 +500,16 @@ function isProductRow(item) {
           >
             <option value="有效">有效</option>
             <option value="结束">结束</option>
+          </select>
+
+          <label className="form-label">客户级别</label>
+          <select
+            className="select"
+            value={form.priority || '普通'}
+            onChange={(e) => updateField('priority', e.target.value)}
+          >
+            <option value="普通">普通</option>
+            <option value="重点">重点</option>
           </select>
 
           <label className="form-label">需求描述</label>

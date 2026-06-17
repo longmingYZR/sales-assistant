@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'salesAssistant';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 let dbPromise = null;
 
@@ -48,6 +48,9 @@ export async function getDB() {
         if (oldVersion < 7) {
           db.createObjectStore('searchIndex', { keyPath: 'term' });
           db.createObjectStore('searchMeta', { keyPath: 'key' });
+        }
+        if (oldVersion < 8) {
+          try { tx.objectStore('customers').createIndex('priority', 'priority'); } catch (e) { /* exists */ }
         }
       },
       blocked() {
@@ -127,6 +130,18 @@ export async function restoreCustomer(id) {
   delete customer._deleted;
   customer.updatedAt = Date.now();
   await db.put('customers', customer);
+}
+
+export async function getPriorityCustomers() {
+  const db = await getDB();
+  const all = await db.getAllFromIndex('customers', 'priority', '重点');
+  return all.filter((c) => !c._deleted);
+}
+
+export async function getNormalCustomers() {
+  const db = await getDB();
+  const all = await db.getAllFromIndex('customers', 'priority', '普通');
+  return all.filter((c) => !c._deleted);
 }
 
 // --- Follow-ups ---

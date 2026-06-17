@@ -19,6 +19,7 @@ export default function Customers() {
   const [filtered, setFiltered] = useState([]);
   const [stageFilter, setStageFilter] = useState('全部');
   const [countryFilter, setCountryFilter] = useState('全部');
+  const [priorityFilter, setPriorityFilter] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
   const [overdueIds, setOverdueIds] = useState(new Set());
   const [overdueInfo, setOverdueInfo] = useState({});
@@ -34,6 +35,8 @@ export default function Customers() {
   useEffect(() => {
     const stageFromUrl = searchParams.get('stage');
     if (stageFromUrl) setStageFilter(stageFromUrl);
+    const priorityFromUrl = searchParams.get('priority');
+    if (priorityFromUrl) setPriorityFilter(priorityFromUrl);
     loadData();
   }, []);
 
@@ -42,7 +45,12 @@ export default function Customers() {
     const DAY = 24 * 60 * 60 * 1000;
 
     const list = await getAllCustomers();
-    list.sort((a, b) => b.updatedAt - a.updatedAt);
+    list.sort((a, b) => {
+      const pa = a.priority === '重点' ? 1 : 0;
+      const pb = b.priority === '重点' ? 1 : 0;
+      if (pa !== pb) return pb - pa;
+      return b.updatedAt - a.updatedAt;
+    });
     setCustomers(list);
 
     const fuList = await getAllFollowUps();
@@ -111,7 +119,8 @@ export default function Customers() {
       result = result.filter((c) =>
         c.companyName?.toLowerCase().includes(q) ||
         c.opportunityId?.toLowerCase().includes(q) ||
-        c.contactName?.toLowerCase().includes(q)
+        c.contactName?.toLowerCase().includes(q) ||
+        (c.priority || '普通').includes(q)
       );
     }
 
@@ -126,8 +135,13 @@ export default function Customers() {
     if (stageFilter !== '已删除' && countryFilter !== '全部') {
       result = result.filter((c) => c.country === countryFilter);
     }
+
+    if (priorityFilter !== '全部') {
+      result = result.filter((c) => (c.priority || '普通') === priorityFilter);
+    }
+
     setFiltered(result);
-  }, [customers, deletedCustomers, stageFilter, countryFilter, zombieIds, searchQuery]);
+  }, [customers, deletedCustomers, stageFilter, countryFilter, zombieIds, searchQuery, priorityFilter]);
 
   if (loading) return <div className="page"><p className="loading">加载中...</p></div>;
 
@@ -171,6 +185,15 @@ export default function Customers() {
             </option>
           ))}
         </select>
+        <select
+          className="select"
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+        >
+          <option value="全部">全部级别</option>
+          <option value="重点">重点</option>
+          <option value="普通">普通</option>
+        </select>
       </div>
 
       {filtered.length === 0 ? (
@@ -184,11 +207,14 @@ export default function Customers() {
             return (
               <li
                 key={c.id}
-                className={`customer-card ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''} ${isDeleted ? 'deleted' : ''}`}
+                className={`customer-card ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''} ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
                 onClick={() => navigate(`/customers/${c.id}`)}
               >
                 <div className="card-top">
                   <strong>{c.companyName}</strong>
+                  {c.priority === '重点' && (
+                    <span className="priority-badge">重点</span>
+                  )}
                   <span className={`stage-badge ${isZombie ? 'stage-zombie' : ''}`}>
                     {c.stage}
                   </span>

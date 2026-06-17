@@ -182,11 +182,14 @@ export default function Dashboard() {
                   {items.map((c) => (
                     <li
                       key={c.id}
-                      className="overdue-item"
+                      className={`overdue-item ${c.priority === '重点' ? 'priority-high' : ''}`}
                       onClick={() => navigate(`/customers/${c.id}`)}
                     >
                       <div className="overdue-info">
-                        <strong>{c.companyName}</strong>
+                        <strong>
+                          {c.companyName}
+                          {c.priority === '重点' && <span className="priority-badge-sm">重点</span>}
+                        </strong>
                         <span>{c.contactName}</span>
                         <span className="overdue-type-info">
                           <span className={`followup-type-badge type-${c.lastType}`}>
@@ -215,11 +218,14 @@ export default function Dashboard() {
             {closedForReview.map((c) => (
               <li
                 key={c.id}
-                className="overdue-item closed-review-item"
+                className={`overdue-item closed-review-item ${c.priority === '重点' ? 'priority-high' : ''}`}
                 onClick={() => navigate(`/customers/${c.id}`)}
               >
                 <div className="overdue-info">
-                  <strong>{c.companyName}</strong>
+                  <strong>
+                    {c.companyName}
+                    {c.priority === '重点' && <span className="priority-badge-sm">重点</span>}
+                  </strong>
                   <span>{c.country}</span>
                   <span className="overdue-type-info" style={{ color: 'var(--text-muted)' }}>
                     {c.stage} · {c.daysSinceReview}天未查看
@@ -236,6 +242,16 @@ export default function Dashboard() {
       <section className="dashboard-section">
         <h3 className="section-title">各阶段统计</h3>
         <div className="stage-stats">
+          <div
+            className="stat-card"
+            style={{ borderColor: '#ff9800' }}
+            onClick={() => navigate('/customers?priority=重点')}
+          >
+            <span className="stat-num" style={{ color: '#ff9800' }}>
+              {allCustomers.filter((c) => c.priority === '重点' && c.status !== '结束' && c.stage !== '商机关闭').length}
+            </span>
+            <span className="stat-label">⭐ 重点商机</span>
+          </div>
           {STAGES.map((stage) => (
             <div
               key={stage}

@@ -43,6 +43,10 @@ export function mapImportRow(raw) {
     if (!isNaN(d.getTime())) createdAt = d.getTime();
   }
 
+  // 客户级别
+  const priorityRaw = (raw['客户级别'] || raw['重点客户'] || raw['优先级'] || '').trim();
+  const priority = priorityRaw === '是' || priorityRaw === '重点' || priorityRaw === 'Y' || priorityRaw === 'yes' ? '重点' : '普通';
+
   return {
     companyName: (raw['客户名称'] || '未命名').trim(),
     contactName: (raw['联系人'] || '').trim(),
@@ -52,6 +56,7 @@ export function mapImportRow(raw) {
     amount,
     opportunityId: (raw['商机编号'] || '').trim(),
     status,
+    priority,
     ...(createdAt ? { createdAt } : {}),
   };
 }
