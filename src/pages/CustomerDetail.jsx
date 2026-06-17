@@ -15,6 +15,7 @@ import {
 import { FOLLOWUP_TYPES, STAGE_FOLLOWUP_TYPES, getIntervalDays } from '../utils/followupTypes';
 import { exportQuotationPDF } from '../utils/quotation';
 import { getCountryPricing, hasProductPricing } from '../utils/countryPricing';
+import { calcVolume, formatVolume } from '../utils/dimensions';
 import CountryProductCards from '../components/CountryProductCards';
 
 const STAGES = ['初接触', '需求确认', '报价中', '谈判中', '成交', '搁置', '商机关闭'];
@@ -78,8 +79,6 @@ export default function CustomerDetail() {
   const [template, setTemplate] = useState(null);
   // Country pricing state
   const [countryPricing, setCountryPricing] = useState(null);
-  const [countrySelectedSeqs, setCountrySelectedSeqs] = useState(new Set());
-  const [costSelection, setCostSelection] = useState({});
   // Collapsible sections
   const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'followUps', 'productPricing', 'quotation']));
 
@@ -163,8 +162,6 @@ function isProductRow(item) {
     // Load country pricing data
     const pricing = getCountryPricing(c.country);
     setCountryPricing(pricing);
-    setCountrySelectedSeqs(new Set());
-    setCostSelection({});
     setLoading(false);
   };
 
@@ -340,59 +337,26 @@ function isProductRow(item) {
     );
   };
 
-  // --- Country product selection ---
-  const handleCountryToggleSelect = (product) => {
-    setCountrySelectedSeqs((prev) => {
-      const next = new Set(prev);
-      if (next.has(product.seq)) {
-        next.delete(product.seq);
-      } else {
-        next.add(product.seq);
-      }
-      return next;
+  // --- Copy product info for logistics ---
+  const handleCopyProduct = (product) => {
+    const volume = calcVolume(product.dimensions);
+    const text = [
+      `${product.model}  ${product.name}`,
+      `FOB: $${Number(product.fob).toLocaleString('en-US')}`,
+      `尺寸: ${product.dimensions || '-'} mm`,
+      `体积: ${formatVolume(volume)}`,
+    ].join('\n');
+
+    navigator.clipboard.writeText(text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
     });
-  };
-
-  const handleToggleCost = (seq, costType) => {
-    setCostSelection((prev) => {
-      const cur = prev[seq] || {};
-      return { ...prev, [seq]: { ...cur, [costType]: !cur[costType] } };
-    });
-  };
-
-  const addCountryProductsToQuotation = () => {
-    if (!countryPricing || countrySelectedSeqs.size === 0) return;
-    const selected = countryPricing.products
-      .filter((p) => countrySelectedSeqs.has(p.seq))
-      .map((p) => {
-        const costs = costSelection[p.seq] || {};
-        const item = {
-          _priceListId: 'country-' + countryPricing.country,
-          _rowIndex: p.seq,
-          _source: 'countryPricing',
-          ['型号']: p.model,
-          ['名称']: p.name,
-          qty: 1,
-          columns: {},
-        };
-        if (p.allFields) {
-          Object.entries(p.allFields).forEach(([k, v]) => {
-            item[k] = v;
-          });
-        }
-        if (costs.fob && p.fob) item.columns['FOB(USD)'] = p.fob;
-        if (costs.freight && p.oceanFreight) item.columns['海运费'] = p.oceanFreight;
-        if (costs.insurance && p.insurance) item.columns['保险费'] = p.insurance;
-        return item;
-      });
-
-    setSelectedProducts((prev) => [...prev, ...selected]);
-    setCountrySelectedSeqs(new Set());
-    if (quoteStep === 'idle') {
-      openQuotation();
-    } else {
-      setQuoteStep('select');
-    }
   };
 
   const updateField = (field, value) => setForm({ ...form, [field]: value });
@@ -603,24 +567,13 @@ function isProductRow(item) {
         >
           {countryPricing.products.length > 0 ? (
             <>
+              <p className="hint" style={{ marginBottom: 10 }}>
+                点击「复制信息」将 FOB 价格、尺寸和体积发送给物流人员
+              </p>
               <CountryProductCards
                 products={countryPricing.products}
-                selectedSeqSet={countrySelectedSeqs}
-                onToggleSelect={handleCountryToggleSelect}
-                costSelection={costSelection}
-                onToggleCost={handleToggleCost}
+                onCopyProduct={handleCopyProduct}
               />
-              <div className="country-pricing-actions">
-                <button
-                  className="btn btn-primary btn-full"
-                  disabled={countrySelectedSeqs.size === 0}
-                  onClick={addCountryProductsToQuotation}
-                >
-                  {countrySelectedSeqs.size > 0
-                    ? `将选中的 ${countrySelectedSeqs.size} 个产品加入报价单`
-                    : '请选择产品加入报价单'}
-                </button>
-              </div>
             </>
           ) : (
             <p className="country-pricing-hint">暂无产品数据</p>
