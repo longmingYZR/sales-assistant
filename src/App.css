@@ -1597,6 +1597,33 @@ body {
   border-left: 3px solid #ff9800;
 }
 
+/* === Closed Section in Customer List === */
+.closed-section {
+  margin-top: 4px;
+}
+.closed-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  transition: background 0.15s;
+}
+.closed-section-header:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+.closed-arrow {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* === Responsive (wider screens) === */
 @media (min-width: 481px) {
   .app-container {
