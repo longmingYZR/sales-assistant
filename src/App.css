@@ -1661,6 +1661,118 @@ body {
   border-color: var(--success);
 }
 
+/* === CIF Calculator === */
+.cif-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cif-product-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.cif-product-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cif-product-model {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  color: var(--text-primary);
+}
+
+.cif-product-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cif-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cif-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.cif-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 50px;
+}
+
+.cif-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+}
+
+.cif-freight-field {
+  padding: 4px 0;
+}
+
+.cif-freight-input {
+  width: 140px;
+  text-align: right;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.cif-insurance {
+  color: var(--text-secondary);
+}
+
+.cif-total-field {
+  padding: 6px 8px;
+  margin-top: 2px;
+  background: rgba(74, 158, 255, 0.08);
+  border-radius: 4px;
+}
+
+.cif-cif {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cif-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(74, 158, 255, 0.12);
+  border-radius: var(--radius);
+  border: 2px solid var(--accent);
+}
+
+.cif-summary-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cif-summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 /* === Responsive (wider screens) === */
 @media (min-width: 481px) {
   .app-container {

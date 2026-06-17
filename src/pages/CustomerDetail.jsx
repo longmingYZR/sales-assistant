@@ -9,11 +9,8 @@ import {
   restoreCustomer,
   getFollowUps,
   addFollowUp,
-  getAllPriceLists,
-  getAllTemplates,
 } from '../db';
 import { FOLLOWUP_TYPES, STAGE_FOLLOWUP_TYPES, getIntervalDays } from '../utils/followupTypes';
-import { exportQuotationPDF } from '../utils/quotation';
 import { getCountryPricing, hasProductPricing } from '../utils/countryPricing';
 import { calcVolume, formatVolume } from '../utils/dimensions';
 import CountryProductCards from '../components/CountryProductCards';
@@ -66,21 +63,12 @@ export default function CustomerDetail() {
   const [saving, setSaving] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [loading, setLoading] = useState(!isNew);
-  // Quotation flow states
-  const [quoteStep, setQuoteStep] = useState('idle'); // idle | select | confirm
-  const [priceLists, setPriceLists] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProducts, setSelectedProducts] = useState([]);
-  const [quoteInfo, setQuoteInfo] = useState({ number: '', date: new Date().toISOString().slice(0, 10) });
-  const [previewHtml, setPreviewHtml] = useState('');
-  const [confirmed, setConfirmed] = useState({ prices: false, bank: false, terms: false });
-  const [bankInfo, setBankInfo] = useState('');
-  const [template, setTemplate] = useState(null);
   // Country pricing state
   const [countryPricing, setCountryPricing] = useState(null);
+  // CIF calculator state — freight input per product model
+  const [cifFreight, setCifFreight] = useState({});
   // Collapsible sections
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'followUps', 'productPricing', 'quotation']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'followUps', 'productPricing', 'cifPricing']));
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
 
@@ -91,38 +79,6 @@ export default function CustomerDetail() {
       return next;
     });
   };
-
-const NAME_KEYS = ['型号', 'Model', 'model', '产品型号', '名称', 'Product', 'name', '品名', '产品名称', '产品'];
-
-function getProductName(item) {
-  for (const k of NAME_KEYS) {
-    const v = item[k];
-    if (v && String(v).trim().length > 0) return String(v).trim();
-  }
-  for (const v of Object.values(item)) {
-    const s = String(v).trim();
-    if (s.length > 2 && !/^\d+(\.\d+)?$/.test(s) && !s.startsWith('_')) return s;
-  }
-  return '产品';
-}
-
-// Product name keywords for filtering valid product rows
-const PRODUCT_NAME_PATTERNS = /宽体车|矿卡|矿挖|电挖|鄂破|反击破|圆锥破|筛分站|潜孔钻机|电动轮/;
-const MODEL_PATTERN = /^(ZT|ZE|ZM|ZDH|ZMS|ZMI|ZMC)/;
-
-function isProductRow(item) {
-  for (const v of Object.values(item)) {
-    const s = String(v).trim();
-    if (MODEL_PATTERN.test(s)) return true;
-    if (PRODUCT_NAME_PATTERNS.test(s)) return true;
-  }
-  const fobKeys = ['FOB(USD)', 'FOB', 'fob'];
-  for (const k of fobKeys) {
-    const v = item[k];
-    if (v && !isNaN(Number(v)) && Number(v) > 1000) return true;
-  }
-  return false;
-}
 
   useEffect(() => {
     if (!isNew) {
@@ -214,129 +170,6 @@ function isProductRow(item) {
     }
   };
 
-  // --- New Quotation Flow ---
-
-  const openQuotation = async () => {
-    const pls = await getAllPriceLists();
-    const tpls = await getAllTemplates();
-    setPriceLists(pls);
-    setTemplates(tpls);
-    if (tpls.length === 0) {
-      alert('请先在产品页上传报价模板（Excel）');
-      return;
-    }
-    setTemplate(tpls[0]); // use first template by default
-    setSelectedProducts([]);
-    setSearchTerm('');
-    setQuoteStep('select');
-  };
-
-  // Build product list from all price lists, filter out non-product rows
-  const allPriceItems = priceLists.flatMap((pl) =>
-    (pl.rows || []).map((row, i) => {
-      const item = {};
-      (pl.headers || []).forEach((h, ci) => { item[h] = row[ci] || ''; });
-      item._priceListId = pl.id;
-      item._rowIndex = i;
-      return item;
-    })
-  ).filter(isProductRow);
-
-  const filteredItems = searchTerm
-    ? allPriceItems.filter((item) =>
-        Object.values(item).some((v) =>
-          String(v).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      )
-    : allPriceItems;
-
-  const toggleProduct = (item) => {
-    setSelectedProducts((prev) => {
-      const exists = prev.find((p) => p._priceListId === item._priceListId && p._rowIndex === item._rowIndex);
-      if (exists) return prev.filter((p) => p !== exists);
-      return [...prev, { ...item, qty: 1, columns: {} }];
-    });
-  };
-
-  const updateQty = (idx, qty) => {
-    setSelectedProducts((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], qty: Math.max(1, Number(qty) || 1) };
-      return next;
-    });
-  };
-
-  const updatePriceCol = (idx, col, val) => {
-    setSelectedProducts((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], columns: { ...next[idx].columns, [col]: val } };
-      return next;
-    });
-  };
-
-  const goToConfirm = () => {
-    if (selectedProducts.length === 0) {
-      alert('请至少选择一个产品');
-      return;
-    }
-    // Extract bank info from template
-    const raw = template?.sheets?.[template?.sheetNames?.[0]] || [];
-    for (const row of raw) {
-      const cellStr = String(row[1] || '');
-      if (cellStr.includes('Beneficiary') || cellStr.includes('Bank') || cellStr.includes('SWIFT')) {
-        setBankInfo(cellStr);
-      }
-    }
-    setQuoteInfo((prev) => ({
-      ...prev,
-      number: `QT${new Date().toISOString().slice(0, 10).replace(/-/g, '')}${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`,
-    }));
-    setQuoteStep('confirm');
-  };
-
-  const handleExportPDF = () => {
-    const priceFieldPattern = /价|Price|price|单价|Unit|FOB|CIF|DDP|海运费|保险|港杂|运费|税|Invoice/i;
-
-    // Collect unique price field keys from selected products
-    const priceFieldKeys = new Set();
-    for (const p of selectedProducts) {
-      for (const k of Object.keys(p)) {
-        if (['_priceListId', '_rowIndex', '_source', 'columns', 'qty', 'name', 'model', '序号', '名称', '型号', '外形尺寸', '运输重量'].includes(k)) continue;
-        if (priceFieldPattern.test(k)) priceFieldKeys.add(k);
-      }
-      if (p.columns) {
-        for (const k of Object.keys(p.columns)) {
-          if (k && String(p.columns[k]).trim()) priceFieldKeys.add(k);
-        }
-      }
-    }
-
-    const priceCols = [
-      { key: 'no', header: 'No.' },
-      { key: 'product', header: 'Product' },
-      { key: 'qty', header: 'QTY' },
-      ...Array.from(priceFieldKeys).map((k) => ({ key: k, header: k })),
-    ];
-
-    const products = selectedProducts.map((p, i) => {
-      const name = p['名称'] || p['型号'] || p.model || p.name || '';
-      const row = { no: String(i + 1), product: name, qty: p.qty || 1 };
-      for (const k of priceFieldKeys) {
-        row[k] = p.columns?.[k] || p[k] || '';
-      }
-      return row;
-    });
-
-    exportQuotationPDF(
-      { companyName: form.companyName, contactName: form.contactName },
-      products,
-      priceCols,
-      bankInfo,
-      quoteInfo,
-      { name: '', contact: '' }
-    );
-  };
-
   // --- Copy product info for logistics ---
   const handleCopyProduct = (product) => {
     const volume = calcVolume(product.dimensions);
@@ -355,6 +188,43 @@ function isProductRow(item) {
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  };
+
+  // --- CIF calculator helpers ---
+  const getFreight = (model) => {
+    if (cifFreight[model] !== undefined && cifFreight[model] !== '') return Number(cifFreight[model]);
+    return 0;
+  };
+
+  const calcInsurance = (fob, freight) => (Number(fob) + freight) * 0.001;
+
+  const calcCIF = (fob, freight) => Number(fob) + freight + calcInsurance(fob, freight);
+
+  const totalCIF = countryPricing?.products.reduce((sum, p) => {
+    const f = getFreight(p.model);
+    return sum + calcCIF(p.fob, f);
+  }, 0) || 0;
+
+  const handleCopyCIFSummary = () => {
+    if (!countryPricing) return;
+    const lines = ['CIF 报价汇总'];
+    for (const p of countryPricing.products) {
+      const f = getFreight(p.model);
+      const ins = calcInsurance(p.fob, f);
+      const cif = calcCIF(p.fob, f);
+      lines.push(`${p.model} ${p.name} | FOB: $${Number(p.fob).toLocaleString('en-US')} | 海运费: $${f.toLocaleString('en-US')} | 保险: $${ins.toFixed(2)} | CIF: $${cif.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+    }
+    lines.push(`总计 CIF: $${totalCIF.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+
+    const text = lines.join('\n');
+    navigator.clipboard.writeText(text).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
       document.body.removeChild(ta);
     });
   };
@@ -591,151 +461,83 @@ function isProductRow(item) {
         </CollapsibleSection>
       )}
 
-      {/* Section 4: Quotation (default collapsed) */}
-      {!isNew && (
+      {/* Section 4: CIF Pricing Calculator */}
+      {!isNew && countryPricing && countryPricing.products.length > 0 && (
         <CollapsibleSection
-          title="报价单生成"
-          badge={selectedProducts.length > 0 ? `${selectedProducts.length}个产品` : null}
-          collapsed={collapsedSections.has('quotation')}
-          onToggle={() => toggleSection('quotation')}
+          title="CIF 计价"
+          badge={countryPricing.pricingModel}
+          collapsed={collapsedSections.has('cifPricing')}
+          onToggle={() => toggleSection('cifPricing')}
         >
-          {quoteStep === 'idle' && (
-            <button className="btn btn-primary btn-full" onClick={openQuotation}>
-              生成报价单
-            </button>
-          )}
+          <p className="hint" style={{ marginBottom: 10 }}>
+            保险按 (FOB + 海运费) × 0.1% 计算。海运费请向物流确认后填入。
+          </p>
 
-          {/* Step 1: Select products */}
-          {quoteStep === 'select' && (
-            <div className="quote-select">
-              <h4>选择产品</h4>
-              <input
-                className="input"
-                placeholder="搜索型号/名称..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {filteredItems.length === 0 ? (
-                <p className="empty">未找到产品，请先在产品页上传价格表</p>
-              ) : (
-                <div className="quote-product-grid">
-                  {filteredItems.map((item, i) => {
-                    const sel = selectedProducts.find((p) => p._priceListId === item._priceListId && p._rowIndex === item._rowIndex);
-                    return (
-                      <div
-                        key={i}
-                        className={`quote-product-card ${sel ? 'selected' : ''}`}
-                        onClick={() => toggleProduct(item)}
-                      >
-                        {sel && <span className="card-check">&#10003;</span>}
-                        <span className="card-name">{getProductName(item)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="quote-actions">
-                <button className="btn btn-back" onClick={() => setQuoteStep('idle')}>取消</button>
-                <button className="btn btn-primary" onClick={goToConfirm}>
-                  下一步（{selectedProducts.length} 个产品）
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="cif-product-list">
+            {countryPricing.products.map((p) => {
+              const freight = getFreight(p.model);
+              const insurance = calcInsurance(p.fob, freight);
+              const cif = calcCIF(p.fob, freight);
+              const volume = calcVolume(p.dimensions);
 
-          {/* Step 2: Confirm & export */}
-          {quoteStep === 'confirm' && (
-            <div className="quote-confirm">
-              <h4>确认报价信息</h4>
-              <p className="hint">报价单号：{quoteInfo.number} &nbsp; 日期：{quoteInfo.date}</p>
-
-              {/* Product table with editable prices */}
-              <div className="confirm-section">
-                <h5 className={!confirmed.prices ? 'confirm-warn' : 'confirm-ok'}>
-                  {!confirmed.prices ? '⚠ 请确认产品价格及费用' : '✓ 价格已确认'}
-                </h5>
-                {selectedProducts.map((p, idx) => {
-                  const name = p['名称'] || p['型号'] || p.model || p.name || '';
-                  const priceKeys = Object.keys(p).filter((k) =>
-                    !['_priceListId', '_rowIndex', '_source', 'columns', 'qty', 'name', 'model', '序号', '名称', '型号'].includes(k) &&
-                    /价|Price|price|单价|Unit|FOB|CIF|DDP|海运费|保险|港杂|运费|税|Invoice/i.test(k)
-                  );
-                  return (
-                    <div key={idx} className="confirm-product-row">
-                      <div className="confirm-product-header">
-                        <span className="confirm-product-name">{name}</span>
-                        <label className="confirm-qty-label">
-                          Qty <input type="number" className="input short" value={p.qty} onChange={(e) => updateQty(idx, e.target.value)} min={1} />
-                        </label>
-                      </div>
-                      {priceKeys.length > 0 && (
-                        <div className="confirm-price-inputs">
-                          {priceKeys.map((pk) => (
-                            <label key={pk} className="confirm-price-label">
-                              <span className="price-key-text">{pk}</span>
-                              <input
-                                type="text"
-                                className="input short"
-                                value={p.columns[pk] || p[pk] || ''}
-                                onChange={(e) => updatePriceCol(idx, pk, e.target.value)}
-                              />
-                            </label>
-                          ))}
-                        </div>
-                      )}
+              return (
+                <div key={p.seq} className="cif-product-row">
+                  <div className="cif-product-header">
+                    <span className="cif-product-model">{p.model}</span>
+                    <span className="cif-product-name">{p.name}</span>
+                  </div>
+                  <div className="cif-fields">
+                    <div className="cif-field">
+                      <span className="cif-label">FOB</span>
+                      <span className="cif-value">$ {Number(p.fob).toLocaleString('en-US')}</span>
                     </div>
-                  );
-                })}
-                <button className="btn btn-sm btn-primary" onClick={() => setConfirmed({ ...confirmed, prices: true })} disabled={confirmed.prices}>
-                  {confirmed.prices ? '已确认' : '确认价格'}
-                </button>
-              </div>
+                    <div className="cif-field">
+                      <span className="cif-label">体积</span>
+                      <span className="cif-value">{formatVolume(volume)}</span>
+                    </div>
+                    <div className="cif-field cif-freight-field">
+                      <span className="cif-label">海运费</span>
+                      <input
+                        type="number"
+                        className="input cif-freight-input"
+                        placeholder="问物流"
+                        value={cifFreight[p.model] !== undefined ? cifFreight[p.model] : (p.oceanFreight || '')}
+                        onChange={(e) => setCifFreight(prev => ({ ...prev, [p.model]: e.target.value }))}
+                        min="0"
+                        step="any"
+                      />
+                    </div>
+                    <div className="cif-field">
+                      <span className="cif-label">保险费</span>
+                      <span className="cif-value cif-insurance">$ {insurance.toFixed(2)}</span>
+                    </div>
+                    <div className="cif-field cif-total-field">
+                      <span className="cif-label">CIF</span>
+                      <span className="cif-value cif-cif">$ {cif.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-              {/* Bank info confirmation */}
-              <div className="confirm-section bank-section">
-                <h5 className={!confirmed.bank ? 'confirm-warn' : 'confirm-ok'}>
-                  {!confirmed.bank ? '🔴 请核对银行信息（敏感）' : '✓ 银行已确认'}
-                </h5>
-                <textarea
-                  className="input textarea"
-                  value={bankInfo}
-                  onChange={(e) => setBankInfo(e.target.value)}
-                  rows={5}
-                  placeholder="银行信息从模板中提取..."
-                />
-                <button className="btn btn-sm btn-primary" onClick={() => setConfirmed({ ...confirmed, bank: true })} disabled={confirmed.bank}>
-                  {confirmed.bank ? '已确认' : '确认银行信息'}
-                </button>
-              </div>
+          <div className="cif-summary">
+            <span className="cif-summary-label">总计 CIF</span>
+            <span className="cif-summary-value">$ {totalCIF.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+          </div>
 
-              {/* Terms confirmation */}
-              <div className="confirm-section">
-                <h5 className={!confirmed.terms ? 'confirm-warn' : 'confirm-ok'}>
-                  {!confirmed.terms ? '⚠ 请确认报价条款' : '✓ 条款已确认'}
-                </h5>
-                <label className="quote-check-label">
-                  <input type="checkbox" checked={confirmed.terms} onChange={(e) => setConfirmed({ ...confirmed, terms: e.target.checked })} />
-                  报价有效期、付款条款、交货条款已确认无误
-                </label>
-              </div>
-
-              <div className="quote-actions">
-                <button className="btn btn-back" onClick={() => setQuoteStep('select')}>返回选择</button>
-                <button
-                  className="btn btn-danger btn-full"
-                  onClick={handleExportPDF}
-                  disabled={!confirmed.prices || !confirmed.bank || !confirmed.terms}
-                >
-                  导出 PDF
-                </button>
-              </div>
-              {(!confirmed.prices || !confirmed.bank || !confirmed.terms) && (
-                <p className="hint" style={{ textAlign: 'center', marginTop: 8 }}>
-                  请确认所有项目后再导出
-                </p>
-              )}
-            </div>
-          )}
+          <button className="btn btn-primary btn-full" onClick={handleCopyCIFSummary} style={{ marginTop: 12 }}>
+            复制 CIF 汇总
+          </button>
+        </CollapsibleSection>
+      )}
+      {!isNew && countryPricing === null && hasProductPricing(form.country) === false && (
+        <CollapsibleSection
+          title="CIF 计价"
+          collapsed={collapsedSections.has('cifPricing')}
+          onToggle={() => toggleSection('cifPricing')}
+        >
+          <p className="country-pricing-hint">暂无该国产品数据</p>
         </CollapsibleSection>
       )}
     </div>
