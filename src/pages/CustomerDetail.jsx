@@ -67,6 +67,8 @@ export default function CustomerDetail() {
   const [countryPricing, setCountryPricing] = useState(null);
   // CIF calculator state — freight input per product model
   const [cifFreight, setCifFreight] = useState({});
+  // CIF product selection
+  const [cifSelectedModels, setCifSelectedModels] = useState(new Set());
   // Collapsible sections
   const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'followUps', 'productPricing', 'cifPricing']));
 
@@ -193,6 +195,15 @@ export default function CustomerDetail() {
     });
   };
 
+  // --- CIF product selection ---
+  const handleToggleCIFSelect = (model) => {
+    setCifSelectedModels((prev) => {
+      const next = new Set(prev);
+      if (next.has(model)) next.delete(model); else next.add(model);
+      return next;
+    });
+  };
+
   // --- CIF calculator helpers ---
   const FOB_MARKUP = 1.15;
   const getFOB = (p) => Number(p.fob) * FOB_MARKUP;
@@ -206,16 +217,19 @@ export default function CustomerDetail() {
 
   const calcCIF = (fob, freight) => fob + freight + calcInsurance(fob, freight);
 
-  const totalCIF = countryPricing?.products.reduce((sum, p) => {
-    const fob = getFOB(p);
-    const f = getFreight(p.model);
-    return sum + calcCIF(fob, f);
-  }, 0) || 0;
+  const totalCIF = countryPricing?.products
+    .filter(p => cifSelectedModels.has(p.model))
+    .reduce((sum, p) => {
+      const fob = getFOB(p);
+      const f = getFreight(p.model);
+      return sum + calcCIF(fob, f);
+    }, 0) || 0;
 
   const handleCopyCIFSummary = () => {
     if (!countryPricing) return;
+    const selected = countryPricing.products.filter(p => cifSelectedModels.has(p.model));
     const lines = ['CIF 报价汇总'];
-    for (const p of countryPricing.products) {
+    for (const p of selected) {
       const fob = getFOB(p);
       const f = getFreight(p.model);
       const ins = calcInsurance(fob, f);
@@ -437,17 +451,18 @@ export default function CustomerDetail() {
       {!isNew && countryPricing && (
         <CollapsibleSection
           title={`产品报价 - ${form.country}`}
-          badge={countryPricing.pricingModel}
           collapsed={collapsedSections.has('productPricing')}
           onToggle={() => toggleSection('productPricing')}
         >
           {countryPricing.products.length > 0 ? (
             <>
               <p className="hint" style={{ marginBottom: 10 }}>
-                点击「复制信息」将 FOB 价格、尺寸和体积发送给物流人员
+                点击卡片选择设备，已选设备将在下方 CIF 计价中计算
               </p>
               <CountryProductCards
                 products={countryPricing.products}
+                selectedModels={cifSelectedModels}
+                onToggleSelect={handleToggleCIFSelect}
                 onCopyProduct={handleCopyProduct}
               />
             </>
@@ -471,23 +486,30 @@ export default function CustomerDetail() {
       {!isNew && countryPricing && countryPricing.products.length > 0 && (
         <CollapsibleSection
           title="CIF 计价"
-          badge={countryPricing.pricingModel}
           collapsed={collapsedSections.has('cifPricing')}
           onToggle={() => toggleSection('cifPricing')}
         >
-          <p className="hint" style={{ marginBottom: 10 }}>
-            保险按 (FOB + 海运费) × 0.1% 计算。海运费请向物流确认后填入。
-          </p>
+          {cifSelectedModels.size === 0 ? (
+            <p className="hint" style={{ textAlign: 'center', padding: 20 }}>
+              👆 请在上方「产品报价」中点击选择需要计价的设备
+            </p>
+          ) : (
+            <>
+              <p className="hint" style={{ marginBottom: 10 }}>
+                保险按 (FOB + 海运费) × 0.1% 计算。海运费请向物流确认后填入。
+              </p>
 
-          <div className="cif-product-list">
-            {countryPricing.products.map((p) => {
-              const fob = getFOB(p);
-              const freight = getFreight(p.model);
-              const insurance = calcInsurance(fob, freight);
-              const cif = calcCIF(fob, freight);
-              const volume = calcVolume(p.dimensions);
+              <div className="cif-product-list">
+                {countryPricing.products
+                  .filter(p => cifSelectedModels.has(p.model))
+                  .map((p) => {
+                    const fob = getFOB(p);
+                    const freight = getFreight(p.model);
+                    const insurance = calcInsurance(fob, freight);
+                    const cif = calcCIF(fob, freight);
+                    const volume = calcVolume(p.dimensions);
 
-              return (
+                    return (
                 <div key={p.seq} className="cif-product-row">
                   <div className="cif-product-header">
                     <span className="cif-product-model">{p.model}</span>
@@ -524,18 +546,20 @@ export default function CustomerDetail() {
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                    );
+                  })}
+              </div>
 
-          <div className="cif-summary">
-            <span className="cif-summary-label">总计 CIF</span>
-            <span className="cif-summary-value">$ {totalCIF.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-          </div>
+              <div className="cif-summary">
+                <span className="cif-summary-label">总计 CIF</span>
+                <span className="cif-summary-value">$ {totalCIF.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
 
-          <button className="btn btn-primary btn-full" onClick={handleCopyCIFSummary} style={{ marginTop: 12 }}>
-            复制 CIF 汇总
-          </button>
+              <button className="btn btn-primary btn-full" onClick={handleCopyCIFSummary} style={{ marginTop: 12 }}>
+                复制 CIF 汇总
+              </button>
+            </>
+          )}
         </CollapsibleSection>
       )}
       {!isNew && countryPricing === null && hasProductPricing(form.country) === false && (

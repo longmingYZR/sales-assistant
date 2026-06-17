@@ -11,7 +11,7 @@ const CATEGORY_CLASS = {
   '其他': 'cat-other',
 };
 
-export default function CountryProductCards({ products, onCopyProduct }) {
+export default function CountryProductCards({ products, selectedModels, onToggleSelect, onCopyProduct }) {
   const [copiedModel, setCopiedModel] = useState(null);
 
   if (!products || products.length === 0) {
@@ -31,9 +31,16 @@ export default function CountryProductCards({ products, onCopyProduct }) {
         const volume = calcVolume(p.dimensions);
         const catClass = CATEGORY_CLASS[p.category] || 'cat-other';
         const justCopied = copiedModel === p.model;
+        const isSelected = selectedModels?.has(p.model);
 
         return (
-          <div key={p.seq} className="country-product-card">
+          <div
+            key={p.seq}
+            className={`country-product-card ${isSelected ? 'selected' : ''}`}
+            onClick={() => onToggleSelect?.(p.model)}
+          >
+            {isSelected && <span className="card-check">&#10003;</span>}
+
             <div className="card-header">
               <span className={`card-category ${catClass}`}>{p.category}</span>
               <span className="card-model">{p.model}</span>
