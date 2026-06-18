@@ -245,9 +245,9 @@ export default function CustomerDetail() {
     }
   };
 
-  const calcInsurance = (fob, freight) => (fob + freight) * 0.001;
+  const calcInsurance = (fob) => fob * 0.001;
 
-  const calcCIF = (fob, freight) => fob + freight + calcInsurance(fob, freight);
+  const calcCIF = (fob, freight) => fob + freight + calcInsurance(fob);
 
   const totalCIF = countryPricing?.products
     .filter(p => cifSelectedModels.has(p.model))
@@ -264,7 +264,7 @@ export default function CustomerDetail() {
     for (const p of selected) {
       const fob = getFOB(p);
       const f = getFreight(p.model, p);
-      const ins = calcInsurance(fob, f);
+      const ins = calcInsurance(fob);
       const cif = calcCIF(fob, f);
       lines.push(`${p.model} ${p.name} | FOB: $${fob.toLocaleString('en-US')} | 海运费: $${f.toLocaleString('en-US')} | 保险: $${ins.toFixed(2)} | CIF: $${cif.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
     }
@@ -528,7 +528,7 @@ export default function CustomerDetail() {
           ) : (
             <>
               <p className="hint" style={{ marginBottom: 10 }}>
-                保险按 (FOB + 海运费) × 0.1% 计算。设置海运费单价后自动计算，可逐产品手动修改。
+                保险按 FOB × 0.1% 计算。设置海运费单价后自动计算，可逐产品手动修改。
               </p>
 
               {/* Freight rate per m³ */}
@@ -558,7 +558,7 @@ export default function CustomerDetail() {
                   .map((p) => {
                     const fob = getFOB(p);
                     const freight = getFreight(p.model, p);
-                    const insurance = calcInsurance(fob, freight);
+                    const insurance = calcInsurance(fob);
                     const cif = calcCIF(fob, freight);
                     const volume = calcVolume(p.dimensions);
                     const isFreightAuto = freightRate !== '' && Number(freightRate) > 0 && !freightOverrides.has(p.model);
