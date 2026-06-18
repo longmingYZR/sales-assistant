@@ -67,6 +67,10 @@ export default function CustomerDetail() {
   const [countryPricing, setCountryPricing] = useState(null);
   // CIF calculator state — freight input per product model
   const [cifFreight, setCifFreight] = useState({});
+  // Freight rate per m³
+  const [freightRate, setFreightRate] = useState('');
+  // Models whose freight has been manually overridden
+  const [freightOverrides, setFreightOverrides] = useState(new Set());
   // CIF product selection
   const [cifSelectedModels, setCifSelectedModels] = useState(new Set());
   // Collapsible sections
@@ -93,6 +97,14 @@ export default function CustomerDetail() {
       setFollowUpType(availableTypes[0]);
     }
   }, [form.stage]);
+
+  // 加载该国家的海运费单价记忆
+  useEffect(() => {
+    if (countryPricing) {
+      const saved = localStorage.getItem(`freightRate_${form.country}`);
+      if (saved !== null) setFreightRate(saved);
+    }
+  }, [countryPricing, form.country]);
 
   const loadCustomer = async () => {
     let c = await getCustomer(Number(id));
@@ -208,9 +220,29 @@ export default function CustomerDetail() {
   const FOB_MARKUP = 1.15;
   const getFOB = (p) => Number(p.fob) * FOB_MARKUP;
 
-  const getFreight = (model) => {
+  const getFreight = (model, product) => {
+    // Tier 1: Manual override — user typed a specific value
     if (cifFreight[model] !== undefined && cifFreight[model] !== '') return Number(cifFreight[model]);
+    // Tier 2: Auto-calculated from rate × volume
+    if (freightRate !== '' && Number(freightRate) > 0 && product) {
+      const volume = calcVolume(product.dimensions);
+      if (volume !== null) {
+        return Math.round(volume * Number(freightRate));
+      }
+    }
+    // Tier 3: Static oceanFreight from product data
+    if (product?.oceanFreight) return Number(product.oceanFreight);
     return 0;
+  };
+
+  const handleFreightRateChange = (value) => {
+    setFreightRate(value);
+    const key = `freightRate_${form.country}`;
+    if (value === '') {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, value);
+    }
   };
 
   const calcInsurance = (fob, freight) => (fob + freight) * 0.001;
@@ -221,7 +253,7 @@ export default function CustomerDetail() {
     .filter(p => cifSelectedModels.has(p.model))
     .reduce((sum, p) => {
       const fob = getFOB(p);
-      const f = getFreight(p.model);
+      const f = getFreight(p.model, p);
       return sum + calcCIF(fob, f);
     }, 0) || 0;
 
@@ -231,7 +263,7 @@ export default function CustomerDetail() {
     const lines = ['CIF 报价汇总'];
     for (const p of selected) {
       const fob = getFOB(p);
-      const f = getFreight(p.model);
+      const f = getFreight(p.model, p);
       const ins = calcInsurance(fob, f);
       const cif = calcCIF(fob, f);
       lines.push(`${p.model} ${p.name} | FOB: $${fob.toLocaleString('en-US')} | 海运费: $${f.toLocaleString('en-US')} | 保险: $${ins.toFixed(2)} | CIF: $${cif.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
@@ -496,18 +528,40 @@ export default function CustomerDetail() {
           ) : (
             <>
               <p className="hint" style={{ marginBottom: 10 }}>
-                保险按 (FOB + 海运费) × 0.1% 计算。海运费请向物流确认后填入。
+                保险按 (FOB + 海运费) × 0.1% 计算。设置海运费单价后自动计算，可逐产品手动修改。
               </p>
+
+              {/* Freight rate per m³ */}
+              <div className="cif-rate-row">
+                <div className="cif-rate-input-group">
+                  <label className="cif-rate-label">海运费单价</label>
+                  <span className="cif-rate-currency">$</span>
+                  <input
+                    type="number"
+                    className="input cif-rate-input"
+                    placeholder="每立方米价格"
+                    value={freightRate}
+                    onChange={(e) => handleFreightRateChange(e.target.value)}
+                    min="0"
+                    step="any"
+                  />
+                  <span className="cif-rate-unit">/ m³</span>
+                </div>
+                {freightRate !== '' && Number(freightRate) > 0 && (
+                  <span className="cif-rate-active-hint">选中产品自动按 体积 × 单价 计算海运费</span>
+                )}
+              </div>
 
               <div className="cif-product-list">
                 {countryPricing.products
                   .filter(p => cifSelectedModels.has(p.model))
                   .map((p) => {
                     const fob = getFOB(p);
-                    const freight = getFreight(p.model);
+                    const freight = getFreight(p.model, p);
                     const insurance = calcInsurance(fob, freight);
                     const cif = calcCIF(fob, freight);
                     const volume = calcVolume(p.dimensions);
+                    const isFreightAuto = freightRate !== '' && Number(freightRate) > 0 && !freightOverrides.has(p.model);
 
                     return (
                 <div key={p.seq} className="cif-product-row">
@@ -526,15 +580,46 @@ export default function CustomerDetail() {
                     </div>
                     <div className="cif-field cif-freight-field">
                       <span className="cif-label">海运费</span>
-                      <input
-                        type="number"
-                        className="input cif-freight-input"
-                        placeholder="问物流"
-                        value={cifFreight[p.model] !== undefined ? cifFreight[p.model] : (p.oceanFreight || '')}
-                        onChange={(e) => setCifFreight(prev => ({ ...prev, [p.model]: e.target.value }))}
-                        min="0"
-                        step="any"
-                      />
+                      <div className="cif-freight-control">
+                        <input
+                          type="number"
+                          className={`input cif-freight-input ${isFreightAuto ? 'cif-freight-auto' : ''}`}
+                          placeholder="问物流"
+                          value={
+                            cifFreight[p.model] !== undefined
+                              ? cifFreight[p.model]
+                              : (freightRate !== '' && Number(freightRate) > 0 ? freight : (p.oceanFreight || ''))
+                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setCifFreight(prev => {
+                              const next = { ...prev };
+                              if (value === '') {
+                                delete next[p.model];
+                              } else {
+                                next[p.model] = value;
+                              }
+                              return next;
+                            });
+                            setFreightOverrides(prev => {
+                              const next = new Set(prev);
+                              if (value === '') {
+                                next.delete(p.model);
+                              } else {
+                                next.add(p.model);
+                              }
+                              return next;
+                            });
+                          }}
+                          min="0"
+                          step="any"
+                        />
+                        {freightOverrides.has(p.model) ? (
+                          <span className="cif-freight-badge cif-freight-badge-manual">手动</span>
+                        ) : (freightRate !== '' && Number(freightRate) > 0) ? (
+                          <span className="cif-freight-badge cif-freight-badge-auto">自动</span>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="cif-field">
                       <span className="cif-label">保险费</span>
