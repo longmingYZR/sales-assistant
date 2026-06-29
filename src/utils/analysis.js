@@ -228,3 +228,68 @@ ${productContext || '暂无产品资料'}
 
   return askAI(prompt, [], apiKey, providerId);
 }
+
+// --- 6. Customer Info Extraction from Chat ---
+
+export async function extractCustomerInfo(messages, apiKey, providerId) {
+  const conversationText = messages
+    .map((m) => `[${m.role === 'user' ? '销售' : 'AI'}]：${m.content}`)
+    .join('\n\n');
+
+  const prompt = `你是一个擅长从销售对话中提取结构化客户信息的助手。请从以下对话记录中提取客户信息。
+
+对话记录：
+${conversationText}
+
+请以严格JSON格式返回提取的信息（只返回JSON对象，不要包裹在markdown代码块中，不要加任何额外说明文字）：
+{
+  "companyName": "公司名，未提到则为空字符串",
+  "contactName": "联系人姓名，未提到则为空字符串",
+  "country": "国家（使用中文名如墨西哥、巴西、阿根廷等），未提到则为空字符串",
+  "needs": "需求描述，总结客户的核心需求和工况，未提到则为空字符串",
+  "stage": "销售阶段猜测，只能是以下之一：初接触/需求确认/报价中/谈判中，默认初接触",
+  "amount": "预算金额（纯数字如500000，未提到则为0）",
+  "priority": "优先级猜测：普通 或 重点，默认普通",
+  "qualBudget": true或false（从对话判断预算是否明确），
+  "qualAuthority": true或false（从对话判断是否已接触到决策人），
+  "qualNeed": true或false（从对话判断需求是否真实明确），
+  "qualTimeline": true或false（从对话判断时间窗口是否小于3个月）
+}`;
+
+  const answer = await askAI(prompt, [], apiKey, providerId);
+
+  // Parse JSON — strip markdown code blocks if present
+  const cleaned = answer
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    // Fallback: regex extract first JSON object
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      parsed = JSON.parse(match[0]);
+    } else {
+      throw new Error('AI返回格式无法解析，请重试');
+    }
+  }
+
+  // Normalize and set defaults
+  const VALID_STAGES = ['初接触', '需求确认', '报价中', '谈判中'];
+  return {
+    companyName: parsed.companyName || '',
+    contactName: parsed.contactName || '',
+    country: parsed.country || '',
+    needs: parsed.needs || '',
+    stage: VALID_STAGES.includes(parsed.stage) ? parsed.stage : '初接触',
+    amount: Number(parsed.amount) || 0,
+    priority: parsed.priority === '重点' ? '重点' : '普通',
+    qualBudget: !!parsed.qualBudget,
+    qualAuthority: !!parsed.qualAuthority,
+    qualNeed: !!parsed.qualNeed,
+    qualTimeline: !!parsed.qualTimeline,
+  };
+}

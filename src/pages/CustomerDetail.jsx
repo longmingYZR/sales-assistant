@@ -33,6 +33,10 @@ const emptyForm = {
   opportunityId: '',
   status: '有效',
   priority: '普通',
+  qualBudget: false,
+  qualAuthority: false,
+  qualNeed: false,
+  qualTimeline: false,
 };
 
 // Inline collapsible section component
@@ -74,7 +78,7 @@ export default function CustomerDetail() {
   // CIF product selection
   const [cifSelectedModels, setCifSelectedModels] = useState(new Set());
   // Collapsible sections
-  const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'followUps', 'productPricing', 'cifPricing']));
+  const [collapsedSections, setCollapsedSections] = useState(new Set(['customerInfo', 'qualification', 'followUps', 'productPricing', 'cifPricing']));
 
   const availableTypes = STAGE_FOLLOWUP_TYPES[form.stage] || ['other'];
 
@@ -127,6 +131,10 @@ export default function CustomerDetail() {
       opportunityId: c.opportunityId || '',
       status: c.status || '有效',
       priority: c.priority || '普通',
+      qualBudget: c.qualBudget || false,
+      qualAuthority: c.qualAuthority || false,
+      qualNeed: c.qualNeed || false,
+      qualTimeline: c.qualTimeline || false,
     });
     setFollowUps(await getFollowUps(c.id));
     // Load country pricing data
@@ -180,6 +188,11 @@ export default function CustomerDetail() {
         amount: c.amount || 0,
         opportunityId: c.opportunityId || '',
         status: c.status || '有效',
+        priority: c.priority || '普通',
+        qualBudget: c.qualBudget || false,
+        qualAuthority: c.qualAuthority || false,
+        qualNeed: c.qualNeed || false,
+        qualTimeline: c.qualTimeline || false,
       });
     }
   };
@@ -279,6 +292,29 @@ export default function CustomerDetail() {
       ta.select(); document.execCommand('copy');
       document.body.removeChild(ta);
     });
+  };
+
+  const QUAL_ITEMS = [
+    { key: 'qualBudget', label: '预算明确？' },
+    { key: 'qualAuthority', label: '决策人已接触？' },
+    { key: 'qualNeed', label: '需求真实？' },
+    { key: 'qualTimeline', label: '时间窗口 < 3个月？' },
+  ];
+
+  const getQualStatus = (f) => {
+    const checked = QUAL_ITEMS.filter((q) => f[q.key]).length;
+    const unchecked = QUAL_ITEMS.filter((q) => !f[q.key]).map((q) => q.label);
+    if (checked === 4) return { text: '已验证', className: 'qual-badge-verified' };
+    if (checked > 0) return { text: '待核实', className: 'qual-badge-pending', detail: unchecked.join('、') };
+    return { text: '低优先级', className: 'qual-badge-low' };
+  };
+
+  const toggleQual = async (key) => {
+    const updated = { ...form, [key]: !form[key] };
+    setForm(updated);
+    if (!isNew) {
+      await updateCustomer(Number(id), { [key]: updated[key] });
+    }
   };
 
   const updateField = (field, value) => setForm({ ...form, [field]: value });
@@ -416,6 +452,44 @@ export default function CustomerDetail() {
           </button>
         </div>
       </CollapsibleSection>
+
+      {/* Section: BANT Qualification */}
+      {!isNew && (() => {
+        const qualStatus = getQualStatus(form);
+        return (
+          <CollapsibleSection
+            title="资格评估"
+            badge={
+              <span className={`section-badge ${qualStatus.className}`}>
+                {qualStatus.text}
+                {qualStatus.detail && (
+                  <span className="qual-badge-detail">：{qualStatus.detail}</span>
+                )}
+              </span>
+            }
+            collapsed={collapsedSections.has('qualification')}
+            onToggle={() => toggleSection('qualification')}
+          >
+            <p className="hint" style={{ marginBottom: 10 }}>
+              快速评估客户质量（BANT法则）
+            </p>
+            <div className="qual-list">
+              {QUAL_ITEMS.map((item) => (
+                <div
+                  key={item.key}
+                  className="qual-item"
+                  onClick={() => toggleQual(item.key)}
+                >
+                  <span className={`qual-icon ${form[item.key] ? 'qual-icon-checked' : ''}`}>
+                    {form[item.key] ? '☑' : '☐'}
+                  </span>
+                  <span className="qual-label">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        );
+      })()}
 
       {/* Section 2: Follow-up Records (moved up, right after customer info) */}
       {!isNew && (
