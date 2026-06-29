@@ -18,6 +18,9 @@ export default function Products() {
   const [message, setMessage] = useState('');
   const fileInputRef = useRef(null);
 
+  // ── Collapse state ──
+  const [showDocs, setShowDocs] = useState(true);
+
   // ── Global Q&A state ──
   const [showChat, setShowChat] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -249,28 +252,35 @@ export default function Products() {
       {/* PDF 文档 */}
       {docs.length > 0 && (
         <section className="products-section">
-          <h3>产品文档 ({docs.length})</h3>
-          <ul className="doc-list">
-            {docs.map((doc) => (
-              <li key={doc.id} className="doc-card">
-                <div className="doc-main" onClick={() => navigate(`/products/${doc.id}/chat`)}>
-                  <div className="doc-icon">📄</div>
-                  <div className="doc-info">
-                    <strong>{doc.fileName}</strong>
-                    <span>{(doc.fileSize / 1024).toFixed(1)} KB · {doc.chunks.length} 块</span>
-                  </div>
-                </div>
-                <div className="doc-actions">
-                  <button className="btn btn-primary btn-sm" onClick={() => navigate(`/products/${doc.id}/chat`)}>
-                    问答
-                  </button>
-                  <button className="btn btn-danger btn-sm" onClick={async () => { await deleteDocument(doc.id); loadAllAndIndex(); }}>
-                    删除
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="collapse-header" onClick={() => setShowDocs(!showDocs)}>
+            <h3 style={{ marginBottom: 0 }}>产品文档 ({docs.length})</h3>
+            <span className={`collapse-arrow ${showDocs ? 'open' : ''}`}>▶</span>
+          </div>
+          {showDocs && (
+            <div className="collapse-body">
+              <ul className="doc-list">
+                {docs.map((doc) => (
+                  <li key={doc.id} className="doc-card">
+                    <div className="doc-main" onClick={() => navigate(`/products/${doc.id}/chat`)}>
+                      <div className="doc-icon">📄</div>
+                      <div className="doc-info">
+                        <strong>{doc.fileName}</strong>
+                        <span>{(doc.fileSize / 1024).toFixed(1)} KB · {doc.chunks.length} 块</span>
+                      </div>
+                    </div>
+                    <div className="doc-actions">
+                      <button className="btn btn-primary btn-sm" onClick={() => navigate(`/products/${doc.id}/chat`)}>
+                        问答
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={async () => { await deleteDocument(doc.id); loadAllAndIndex(); }}>
+                        删除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
