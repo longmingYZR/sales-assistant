@@ -6,6 +6,7 @@ import Customers from './pages/Customers';
 import CustomerDetail from './pages/CustomerDetail';
 import Products from './pages/Products';
 import ProductChat from './pages/ProductChat';
+import Checkpoints from './pages/Checkpoints';
 import RequirementChat from './pages/RequirementChat';
 import ConversationList from './pages/ConversationList';
 import Settings from './pages/Settings';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/products/:id/chat" element={<ProductChat />} />
           <Route path="/assistant" element={<ConversationList />} />
           <Route path="/assistant/:id" element={<RequirementChat />} />
+          <Route path="/checkpoints" element={<Checkpoints />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

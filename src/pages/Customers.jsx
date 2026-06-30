@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllCustomers, getAllFollowUps, getLastFollowUp, getDeletedCustomers, restoreCustomer } from '../db';
+import { getAllCustomers, getAllFollowUps, getLastFollowUp, getDeletedCustomers, restoreCustomer, addReviewSession, updateCustomer } from '../db';
 import { detectZombieCustomers } from '../utils/analysis';
 import { getIntervalDays, FOLLOWUP_TYPES } from '../utils/followupTypes';
 import { hasProductPricing } from '../utils/countryPricing';
@@ -31,6 +31,10 @@ export default function Customers() {
   const [restoringId, setRestoringId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showClosed, setShowClosed] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [reviewNotes, setReviewNotes] = useState({});
+  const [savingCheckpoint, setSavingCheckpoint] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -100,6 +104,83 @@ export default function Customers() {
 
     setLoading(false);
   };
+
+  // ── 点检模式 ──
+  function toggleReviewMode() {
+    if (reviewMode) {
+      setSelectedIds(new Set());
+      setReviewNotes({});
+    }
+    setReviewMode((v) => !v);
+  }
+
+  function toggleSelectCustomer(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        setReviewNotes((n) => { const c = { ...n }; delete c[id]; return c; });
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function selectAllFiltered() {
+    const allIds = filteredActive.map((c) => c.id);
+    if (showClosed) {
+      allIds.push(...filteredClosed.map((c) => c.id));
+    }
+    setSelectedIds(new Set(allIds));
+  }
+
+  function updateReviewNote(id, note) {
+    setReviewNotes((prev) => ({ ...prev, [id]: note }));
+  }
+
+  function generateCheckpointTitle() {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const count = selectedIds.size;
+    const parts = [`${month}月${day}日点检`];
+    if (countryFilter !== '全部') {
+      parts.push(countryFilter);
+    }
+    if (stageFilter !== '全部' && stageFilter !== '已删除' && stageFilter !== '低活跃') {
+      parts.push(stageFilter);
+    }
+    parts.push(`(${count}个)`);
+    return parts.join(' - ');
+  }
+
+  async function saveCheckpoint() {
+    if (selectedIds.size === 0) return;
+    setSavingCheckpoint(true);
+    const title = generateCheckpointTitle();
+    const now = Date.now();
+    const customerIds = Array.from(selectedIds);
+
+    await addReviewSession({
+      title,
+      customerIds,
+      notes: reviewNotes,
+    });
+
+    for (const customerId of customerIds) {
+      await updateCustomer(customerId, {
+        lastCheckpointAt: now,
+        lastCheckpointNote: reviewNotes[customerId] || '',
+      });
+    }
+
+    setSelectedIds(new Set());
+    setReviewNotes({});
+    setReviewMode(false);
+    setSavingCheckpoint(false);
+    await loadData();
+  }
 
   const handleRestore = async (id, e) => {
     e.stopPropagation();
@@ -205,6 +286,21 @@ export default function Customers() {
         </select>
       </div>
 
+      {/* 点检模式工具栏 */}
+      <div className="review-toolbar">
+        <button
+          className={`btn btn-sm ${reviewMode ? 'btn-danger' : 'btn-primary'}`}
+          onClick={toggleReviewMode}
+        >
+          {reviewMode ? '退出点检' : '📋 点检模式'}
+        </button>
+        {reviewMode && (
+          <button className="btn btn-back btn-sm" onClick={selectAllFiltered}>
+            全选当前筛选
+          </button>
+        )}
+      </div>
+
       {filteredActive.length === 0 && filteredClosed.length === 0 ? (
         <p className="empty">暂无客户，点击右上角新增</p>
       ) : (
@@ -217,9 +313,20 @@ export default function Customers() {
               return (
                 <li
                   key={c.id}
-                  className={`customer-card ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''} ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
-                  onClick={() => navigate(`/customers/${c.id}`)}
+                  className={`customer-card ${reviewMode ? 'review-mode' : ''} ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''} ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
+                  onClick={reviewMode ? () => {
+                    toggleSelectCustomer(c.id);
+                  } : () => navigate(`/customers/${c.id}`)}
                 >
+                  {reviewMode && (
+                    <input
+                      type="checkbox"
+                      className="review-checkbox"
+                      checked={selectedIds.has(c.id)}
+                      onChange={() => toggleSelectCustomer(c.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
                   <div className="card-top">
                     <strong>{c.companyName}</strong>
                     {c.priority === '重点' && (
@@ -265,6 +372,16 @@ export default function Customers() {
                       <span className="zombie-reason">{zInfo.zombieReasons.join(' · ')}</span>
                     </div>
                   )}
+                  {reviewMode && selectedIds.has(c.id) && (
+                    <textarea
+                      className="input textarea review-note-input"
+                      placeholder="点检备注（可选）..."
+                      value={reviewNotes[c.id] || ''}
+                      onChange={(e) => updateReviewNote(c.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      rows={2}
+                    />
+                  )}
                 </li>
               );
             })}
@@ -287,10 +404,21 @@ export default function Customers() {
                     return (
                       <li
                         key={c.id}
-                        className={`customer-card ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
-                        onClick={() => navigate(`/customers/${c.id}`)}
+                        className={`customer-card ${reviewMode ? 'review-mode' : ''} ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
+                        onClick={reviewMode ? () => {
+                          toggleSelectCustomer(c.id);
+                        } : () => navigate(`/customers/${c.id}`)}
                         style={{ opacity: 0.85 }}
                       >
+                        {reviewMode && (
+                          <input
+                            type="checkbox"
+                            className="review-checkbox"
+                            checked={selectedIds.has(c.id)}
+                            onChange={() => toggleSelectCustomer(c.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
                         <div className="card-top">
                           <strong>{c.companyName}</strong>
                           {c.priority === '重点' && (
@@ -322,11 +450,35 @@ export default function Customers() {
                             </button>
                           </div>
                         )}
+                        {reviewMode && selectedIds.has(c.id) && (
+                          <textarea
+                            className="input textarea review-note-input"
+                            placeholder="点检备注（可选）..."
+                            value={reviewNotes[c.id] || ''}
+                            onChange={(e) => updateReviewNote(c.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            rows={2}
+                          />
+                        )}
                       </li>
                     );
                   })}
                 </ul>
               )}
+            </div>
+          )}
+
+          {/* 点检底部栏 */}
+          {reviewMode && selectedIds.size > 0 && (
+            <div className="review-bottom-bar">
+              <span className="review-count">已选 {selectedIds.size} 个客户</span>
+              <button
+                className="btn btn-primary"
+                onClick={saveCheckpoint}
+                disabled={savingCheckpoint}
+              >
+                {savingCheckpoint ? '保存中...' : '完成点检'}
+              </button>
             </div>
           )}
         </>

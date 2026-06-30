@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'salesAssistant';
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 let dbPromise = null;
 
@@ -51,6 +51,9 @@ export async function getDB() {
         }
         if (oldVersion < 8) {
           try { tx.objectStore('customers').createIndex('priority', 'priority'); } catch (e) { /* exists */ }
+        }
+        if (oldVersion < 9) {
+          db.createObjectStore('reviewSessions', { keyPath: 'id', autoIncrement: true });
         }
       },
       blocked() {
@@ -289,4 +292,29 @@ export async function updateConversation(id, changes) {
 export async function deleteConversation(id) {
   const db = await getDB();
   return db.delete('conversations', id);
+}
+
+// --- Review Sessions (商机点检) ---
+
+export async function getAllReviewSessions() {
+  const db = await getDB();
+  const all = await db.getAll('reviewSessions');
+  all.sort((a, b) => b.createdAt - a.createdAt);
+  return all;
+}
+
+export async function getReviewSession(id) {
+  const db = await getDB();
+  return db.get('reviewSessions', id);
+}
+
+export async function addReviewSession(session) {
+  const db = await getDB();
+  const now = Date.now();
+  return db.add('reviewSessions', { ...session, createdAt: now });
+}
+
+export async function deleteReviewSession(id) {
+  const db = await getDB();
+  return db.delete('reviewSessions', id);
 }

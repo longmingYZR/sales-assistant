@@ -21,6 +21,7 @@ import {
   getAllPriceLists,
   getAllTemplates,
   getAllConversations,
+  getAllReviewSessions,
 } from '../db';
 
 import { getDB } from '../db';
@@ -82,7 +83,7 @@ function setLastSyncAt(ts) {
 // 导出
 // ═══════════════════════════════════════════════
 
-const STORE_NAMES = ['customers', 'followUps', 'documents', 'priceLists', 'templates', 'conversations'];
+const STORE_NAMES = ['customers', 'followUps', 'documents', 'priceLists', 'templates', 'conversations', 'reviewSessions'];
 
 const STORE_READERS = {
   customers:     getAllCustomersRaw, // 包含墓碑，让其他设备知道删除操作
@@ -91,6 +92,7 @@ const STORE_READERS = {
   priceLists:    getAllPriceLists,
   templates:     getAllTemplates,
   conversations: getAllConversations,
+  reviewSessions: getAllReviewSessions,
 };
 
 /**

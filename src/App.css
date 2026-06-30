@@ -1975,3 +1975,145 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
+/* === Review Mode (点检模式) === */
+.review-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.customer-card.review-mode {
+  padding-left: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.review-note-input {
+  margin-top: 8px;
+  font-size: var(--font-size-sm);
+  min-height: 36px;
+  width: 100%;
+}
+
+.review-bottom-bar {
+  position: fixed;
+  bottom: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  z-index: 90;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0));
+}
+
+.review-count {
+  font-size: var(--font-size);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* === Checkpoint History === */
+.checkpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkpoint-session-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.checkpoint-session-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.checkpoint-session-header:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.checkpoint-session-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkpoint-date {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.checkpoint-count {
+  font-size: var(--font-size-sm);
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.checkpoint-session-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.checkpoint-customer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  min-height: var(--touch-target);
+  transition: background 0.15s;
+}
+
+.checkpoint-customer-row:last-child {
+  border-bottom: none;
+}
+
+.checkpoint-customer-row:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.checkpoint-customer-name {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.checkpoint-customer-note {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}

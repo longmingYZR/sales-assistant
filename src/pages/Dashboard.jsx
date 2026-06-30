@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllCustomers, getAllFollowUps, getLastFollowUp, getAllConversations } from '../db';
+import { getAllCustomers, getAllFollowUps, getLastFollowUp, getAllConversations, getAllReviewSessions } from '../db';
 import { analyzePriority, analyzeDealPatterns, askAboutCustomers } from '../utils/analysis';
 import { FOLLOWUP_TYPES, getCategoryForType, getIntervalDays, CATEGORY_CONFIG } from '../utils/followupTypes';
 
@@ -26,6 +26,8 @@ export default function Dashboard() {
 
   const [closedForReview, setClosedForReview] = useState([]);
   const [recentConversations, setRecentConversations] = useState([]);
+  const [pendingCheckpointCount, setPendingCheckpointCount] = useState(0);
+  const [recentSessions, setRecentSessions] = useState([]);
 
   const askEndRef = useRef(null);
   const navigate = useNavigate();
@@ -97,6 +99,16 @@ export default function Dashboard() {
     setClosedForReview(reviewList);
 
     getAllConversations().then((all) => setRecentConversations(all.slice(0, 3))).catch(() => {});
+
+    // 待点检：从未点检或超过7天未点检的有效客户
+    const CHECKPOINT_DAYS = 7 * DAY;
+    const pending = customers.filter((c) => {
+      if (c.status === '结束' || c.stage === '商机关闭') return false;
+      return !c.lastCheckpointAt || (now - c.lastCheckpointAt > CHECKPOINT_DAYS);
+    });
+    setPendingCheckpointCount(pending.length);
+
+    getAllReviewSessions().then((all) => setRecentSessions(all.slice(0, 3))).catch(() => {});
 
     setLoading(false);
   };
@@ -244,6 +256,19 @@ export default function Dashboard() {
         <div className="stage-stats">
           <div
             className="stat-card"
+            style={{ borderColor: pendingCheckpointCount > 0 ? '#e0a855' : 'var(--border)' }}
+            onClick={() => {
+              navigate('/customers');
+              // Navigate to customers page; user can use filters to find pending ones
+            }}
+          >
+            <span className="stat-num" style={{ color: pendingCheckpointCount > 0 ? '#e0a855' : 'var(--text-muted)' }}>
+              {pendingCheckpointCount}
+            </span>
+            <span className="stat-label">📋 待点检</span>
+          </div>
+          <div
+            className="stat-card"
             style={{ borderColor: '#ff9800' }}
             onClick={() => navigate('/customers?priority=重点')}
           >
@@ -264,6 +289,36 @@ export default function Dashboard() {
           ))}
         </div>
       </section>
+
+      {/* 最近点检 */}
+      {recentSessions.length > 0 && (
+        <section className="dashboard-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h3 className="section-title" style={{ marginBottom: 0 }}>最近点检</h3>
+            <button
+              className="btn btn-back btn-sm"
+              onClick={() => navigate('/checkpoints')}
+            >
+              查看全部 →
+            </button>
+          </div>
+          {recentSessions.map((s) => (
+            <div
+              key={s.id}
+              className="doc-item"
+              onClick={() => navigate('/checkpoints')}
+              style={{ marginBottom: 4 }}
+            >
+              <div className="doc-info">
+                <span className="doc-name">{s.title}</span>
+                <span className="doc-size">
+                  {new Date(s.createdAt).toLocaleDateString('zh-CN')} · {s.customerIds.length} 个客户
+                </span>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {/* ===== 智能分析区 ===== */}
       <section className="dashboard-section">
