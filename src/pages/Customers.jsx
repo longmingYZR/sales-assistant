@@ -178,6 +178,23 @@ export default function Customers() {
     return parts.join(' - ');
   }
 
+  async function saveSingleCheckpoint(customerId) {
+    const now = Date.now();
+    const note = reviewNotes[customerId] || '';
+    const title = `${now.getMonth() + 1}月${now.getDate()}日点检 (1个)`;
+
+    await addReviewSession({ title, customerIds: [customerId], notes: { [customerId]: note } });
+    await updateCustomer(customerId, { lastCheckpointAt: now, lastCheckpointNote: note });
+    await addFollowUp({
+      customerId, date: now, type: 'checkpoint',
+      content: note ? `${title}\n${note}` : title,
+    });
+
+    setSelectedIds((prev) => { const next = new Set(prev); next.delete(customerId); return next; });
+    setReviewNotes((prev) => { const c = { ...prev }; delete c[customerId]; return c; });
+    await loadData();
+  }
+
   async function saveCheckpoint() {
     if (selectedIds.size === 0) return;
     setSavingCheckpoint(true);
@@ -442,14 +459,23 @@ export default function Customers() {
                     </div>
                   )}
                   {reviewMode && selectedIds.has(c.id) && (
-                    <textarea
-                      className="input textarea review-note-input"
-                      placeholder="点检备注（可选）..."
-                      value={reviewNotes[c.id] || ''}
-                      onChange={(e) => updateReviewNote(c.id, e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      rows={2}
-                    />
+                    <div>
+                      <textarea
+                        className="input textarea review-note-input"
+                        placeholder="点检备注（可选）..."
+                        value={reviewNotes[c.id] || ''}
+                        onChange={(e) => updateReviewNote(c.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        rows={2}
+                      />
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={(e) => { e.stopPropagation(); saveSingleCheckpoint(c.id); }}
+                        style={{ marginTop: 4 }}
+                      >
+                        保存点检
+                      </button>
+                    </div>
                   )}
                 </li>
               );
