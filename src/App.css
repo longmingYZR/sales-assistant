@@ -636,6 +636,29 @@ body {
   white-space: pre-wrap;
 }
 
+.fu-content-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.fu-content-row .followup-content {
+  flex: 1;
+  margin-top: 0;
+}
+
+.fu-edit-row {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fu-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
 /* === Upload Area === */
 .upload-area {
   margin-bottom: 12px;

@@ -21,6 +21,7 @@ export default function Customers() {
   const [stageFilter, setStageFilter] = useState('全部');
   const [countryFilter, setCountryFilter] = useState('全部');
   const [priorityFilter, setPriorityFilter] = useState('全部');
+  const [checkpointFilter, setCheckpointFilter] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
   const [overdueIds, setOverdueIds] = useState(new Set());
   const [overdueInfo, setOverdueInfo] = useState({});
@@ -231,6 +232,19 @@ export default function Customers() {
       result = result.filter((c) => (c.priority || '普通') === priorityFilter);
     }
 
+    // 点检筛选
+    const now_ = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    if (checkpointFilter === 'reviewed') {
+      result = result.filter((c) => c.lastCheckpointAt);
+    } else if (checkpointFilter === 'unreviewed') {
+      result = result.filter((c) => !c.lastCheckpointAt);
+    } else if (checkpointFilter === 'over7') {
+      result = result.filter((c) => !c.lastCheckpointAt || (now_ - c.lastCheckpointAt > 7 * DAY));
+    } else if (checkpointFilter === 'over30') {
+      result = result.filter((c) => !c.lastCheckpointAt || (now_ - c.lastCheckpointAt > 30 * DAY));
+    }
+
     // 分离已关闭商机：仅在「全部」阶段时独立收纳
     if (stageFilter === '全部') {
       setFilteredActive(result.filter((c) => c.stage !== '商机关闭' && c.status !== '结束'));
@@ -239,7 +253,7 @@ export default function Customers() {
       setFilteredActive(result);
       setFilteredClosed([]);
     }
-  }, [customers, deletedCustomers, stageFilter, countryFilter, zombieIds, searchQuery, priorityFilter]);
+  }, [customers, deletedCustomers, stageFilter, countryFilter, zombieIds, searchQuery, priorityFilter, checkpointFilter]);
 
   if (loading) return <div className="page"><p className="loading">加载中...</p></div>;
 
@@ -291,6 +305,17 @@ export default function Customers() {
           <option value="全部">全部级别</option>
           <option value="重点">重点</option>
           <option value="普通">普通</option>
+        </select>
+        <select
+          className="select"
+          value={checkpointFilter}
+          onChange={(e) => setCheckpointFilter(e.target.value)}
+        >
+          <option value="全部">全部点检</option>
+          <option value="reviewed">已点检</option>
+          <option value="unreviewed">未点检</option>
+          <option value="over7">超7天未点检</option>
+          <option value="over30">超30天未点检</option>
         </select>
       </div>
 

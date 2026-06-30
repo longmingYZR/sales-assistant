@@ -9,6 +9,7 @@ import {
   restoreCustomer,
   getFollowUps,
   addFollowUp,
+  updateFollowUp,
 } from '../db';
 import { FOLLOWUP_TYPES, STAGE_FOLLOWUP_TYPES, getIntervalDays } from '../utils/followupTypes';
 import { getCountryPricing, hasProductPricing } from '../utils/countryPricing';
@@ -64,6 +65,8 @@ export default function CustomerDetail() {
   const [followUps, setFollowUps] = useState([]);
   const [newFollowUp, setNewFollowUp] = useState('');
   const [followUpType, setFollowUpType] = useState('visit');
+  const [editingFuId, setEditingFuId] = useState(null);
+  const [editingFuContent, setEditingFuContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [loading, setLoading] = useState(!isNew);
@@ -155,6 +158,22 @@ export default function CustomerDetail() {
       await updateCustomer(Number(id), form);
     }
     setSaving(false);
+  };
+
+  const startEditFu = (f) => {
+    setEditingFuId(f.id);
+    setEditingFuContent(f.content);
+  };
+  const cancelEditFu = () => {
+    setEditingFuId(null);
+    setEditingFuContent('');
+  };
+  const saveEditFu = async (id) => {
+    if (!editingFuContent.trim()) return;
+    await updateFollowUp(id, { content: editingFuContent.trim() });
+    setEditingFuId(null);
+    setEditingFuContent('');
+    setFollowUps(await getFollowUps(Number(id)));
   };
 
   const handleAddFollowUp = async () => {
@@ -547,7 +566,31 @@ export default function CustomerDetail() {
                       {FOLLOWUP_TYPES[f.type || 'other']?.label || '其他'}
                     </span>
                   </span>
-                  <p className="followup-content">{f.content}</p>
+                  {editingFuId === f.id ? (
+                    <div className="fu-edit-row">
+                      <textarea
+                        className="input textarea"
+                        value={editingFuContent}
+                        onChange={(e) => setEditingFuContent(e.target.value)}
+                        rows={3}
+                      />
+                      <div className="fu-edit-actions">
+                        <button className="btn btn-primary btn-sm" onClick={() => saveEditFu(f.id)}>保存</button>
+                        <button className="btn btn-back btn-sm" onClick={cancelEditFu}>取消</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="fu-content-row">
+                      <p className="followup-content">{f.content}</p>
+                      <button
+                        className="btn btn-back btn-xs"
+                        onClick={() => startEditFu(f)}
+                        style={{ fontSize: 10, padding: '2px 6px', opacity: 0.6, flexShrink: 0 }}
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

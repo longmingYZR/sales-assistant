@@ -169,6 +169,14 @@ export async function addFollowUp(followUp) {
   await tx.done;
 }
 
+export async function updateFollowUp(id, changes) {
+  const db = await getDB();
+  const fu = await db.get('followUps', id);
+  if (!fu) return;
+  Object.assign(fu, changes);
+  return db.put('followUps', fu);
+}
+
 export async function getAllFollowUps() {
   const db = await getDB();
   return db.getAll('followUps');
