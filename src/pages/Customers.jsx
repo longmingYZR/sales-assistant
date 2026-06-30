@@ -37,15 +37,29 @@ export default function Customers() {
   const [reviewNotes, setReviewNotes] = useState({});
   const [savingCheckpoint, setSavingCheckpoint] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const stageFromUrl = searchParams.get('stage');
     if (stageFromUrl) setStageFilter(stageFromUrl);
+    const countryFromUrl = searchParams.get('country');
+    if (countryFromUrl) setCountryFilter(countryFromUrl);
     const priorityFromUrl = searchParams.get('priority');
     if (priorityFromUrl) setPriorityFilter(priorityFromUrl);
+    const checkpointFromUrl = searchParams.get('checkpoint');
+    if (checkpointFromUrl) setCheckpointFilter(checkpointFromUrl);
     loadData();
   }, []);
+
+  // 同步筛选状态到 URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (stageFilter !== '全部') params.set('stage', stageFilter);
+    if (countryFilter !== '全部') params.set('country', countryFilter);
+    if (priorityFilter !== '全部') params.set('priority', priorityFilter);
+    if (checkpointFilter !== '全部') params.set('checkpoint', checkpointFilter);
+    setSearchParams(params, { replace: true });
+  }, [stageFilter, countryFilter, priorityFilter, checkpointFilter]);
 
   const loadData = async () => {
     const now = Date.now();
@@ -349,7 +363,10 @@ export default function Customers() {
                   className={`customer-card ${reviewMode ? 'review-mode' : ''} ${overdueIds.has(c.id) ? 'overdue' : ''} ${isZombie ? 'zombie' : ''} ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
                   onClick={reviewMode ? () => {
                     toggleSelectCustomer(c.id);
-                  } : () => navigate(`/customers/${c.id}`)}
+                  } : () => {
+                    if (window.getSelection()?.toString()) return;
+                    navigate(`/customers/${c.id}`);
+                  }}
                 >
                   {reviewMode && (
                     <input
@@ -445,7 +462,10 @@ export default function Customers() {
                         className={`customer-card ${reviewMode ? 'review-mode' : ''} ${isDeleted ? 'deleted' : ''} ${c.priority === '重点' ? 'priority-high' : ''}`}
                         onClick={reviewMode ? () => {
                           toggleSelectCustomer(c.id);
-                        } : () => navigate(`/customers/${c.id}`)}
+                        } : () => {
+                    if (window.getSelection()?.toString()) return;
+                    navigate(`/customers/${c.id}`);
+                  }}
                         style={{ opacity: 0.85 }}
                       >
                         {reviewMode && (
