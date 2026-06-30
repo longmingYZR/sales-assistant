@@ -393,6 +393,12 @@ body {
   margin-right: 6px;
 }
 
+.card-checkpoint {
+  font-size: var(--font-size-xs);
+  margin: 4px 0 0 0;
+  color: var(--text-muted);
+}
+
 .overdue-tag {
   display: inline-block;
   font-size: var(--font-size-xs);

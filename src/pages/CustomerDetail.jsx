@@ -135,6 +135,8 @@ export default function CustomerDetail() {
       qualAuthority: c.qualAuthority || false,
       qualNeed: c.qualNeed || false,
       qualTimeline: c.qualTimeline || false,
+      lastCheckpointAt: c.lastCheckpointAt,
+      lastCheckpointNote: c.lastCheckpointNote || '',
     });
     setFollowUps(await getFollowUps(c.id));
     // Load country pricing data
@@ -442,6 +444,23 @@ export default function CustomerDetail() {
             placeholder="客户需求..."
             rows={3}
           />
+
+          {form.lastCheckpointAt && (
+            <div style={{
+              marginTop: 8, padding: '8px 10px',
+              background: 'rgba(74, 158, 255, 0.06)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--text-muted)',
+            }}>
+              📋 上次点检：{new Date(form.lastCheckpointAt).toLocaleDateString('zh-CN', {
+                month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+              })}
+              {form.lastCheckpointNote && (
+                <span style={{ color: 'var(--text-primary)', marginLeft: 4 }}>— {form.lastCheckpointNote}</span>
+              )}
+            </div>
+          )}
 
           <button
             className="btn btn-primary btn-full"

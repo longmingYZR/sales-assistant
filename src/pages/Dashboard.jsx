@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [recentConversations, setRecentConversations] = useState([]);
   const [pendingCheckpointCount, setPendingCheckpointCount] = useState(0);
   const [recentSessions, setRecentSessions] = useState([]);
+  const [collapsedCats, setCollapsedCats] = useState(new Set());
 
   const askEndRef = useRef(null);
   const navigate = useNavigate();
@@ -189,31 +190,46 @@ export default function Dashboard() {
             const cfg = CATEGORY_CONFIG[cat];
             return (
               <div key={cat} className={`followup-category category-${cfg.color}`}>
-                <h4 className="category-title">{cfg.label} ({items.length})</h4>
-                <ul className="overdue-list">
-                  {items.map((c) => (
-                    <li
-                      key={c.id}
-                      className={`overdue-item ${c.priority === '重点' ? 'priority-high' : ''}`}
-                      onClick={() => navigate(`/customers/${c.id}`)}
-                    >
-                      <div className="overdue-info">
-                        <strong>
-                          {c.companyName}
-                          {c.priority === '重点' && <span className="priority-badge-sm">重点</span>}
-                        </strong>
-                        <span>{c.contactName}</span>
-                        <span className="overdue-type-info">
-                          <span className={`followup-type-badge type-${c.lastType}`}>
-                            {FOLLOWUP_TYPES[c.lastType]?.label}
+                <h4
+                  className="category-title"
+                  onClick={() => setCollapsedCats((prev) => {
+                    const next = new Set(prev);
+                    next.has(cat) ? next.delete(cat) : next.add(cat);
+                    return next;
+                  })}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                >
+                  {cfg.label} ({items.length})
+                  <span style={{ float: 'right', fontSize: 12 }}>
+                    {collapsedCats.has(cat) ? '▶' : '▼'}
+                  </span>
+                </h4>
+                {!collapsedCats.has(cat) && (
+                  <ul className="overdue-list">
+                    {items.map((c) => (
+                      <li
+                        key={c.id}
+                        className={`overdue-item ${c.priority === '重点' ? 'priority-high' : ''}`}
+                        onClick={() => navigate(`/customers/${c.id}`)}
+                      >
+                        <div className="overdue-info">
+                          <strong>
+                            {c.companyName}
+                            {c.priority === '重点' && <span className="priority-badge-sm">重点</span>}
+                          </strong>
+                          <span>{c.contactName}</span>
+                          <span className="overdue-type-info">
+                            <span className={`followup-type-badge type-${c.lastType}`}>
+                              {FOLLOWUP_TYPES[c.lastType]?.label}
+                            </span>
+                            超{c.daysOverdue}天
                           </span>
-                          超{c.daysOverdue}天
-                        </span>
-                      </div>
-                      <span className="stage-badge">{c.stage}</span>
-                    </li>
-                  ))}
-                </ul>
+                        </div>
+                        <span className="stage-badge">{c.stage}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             );
           })

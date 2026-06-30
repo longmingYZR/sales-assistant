@@ -350,6 +350,11 @@ export default function Customers() {
                       {lastFollowUpMap[c.id].content.length > 80 ? '...' : ''}
                     </p>
                   )}
+                  {c.lastCheckpointAt ? (
+                    <p className="card-checkpoint">📋 {Math.floor((Date.now() - c.lastCheckpointAt) / 86400000)}天前点检</p>
+                  ) : (
+                    <p className="card-checkpoint" style={{ color: 'var(--warning)' }}>📋 未点检</p>
+                  )}
                   {isDeleted && (
                     <div className="deleted-actions">
                       <button
@@ -438,6 +443,11 @@ export default function Customers() {
                             {lastFollowUpMap[c.id].content.slice(0, 80)}
                             {lastFollowUpMap[c.id].content.length > 80 ? '...' : ''}
                           </p>
+                        )}
+                        {c.lastCheckpointAt ? (
+                          <p className="card-checkpoint">📋 {Math.floor((Date.now() - c.lastCheckpointAt) / 86400000)}天前点检</p>
+                        ) : (
+                          <p className="card-checkpoint" style={{ color: 'var(--warning)' }}>📋 未点检</p>
                         )}
                         {isDeleted && (
                           <div className="deleted-actions">
