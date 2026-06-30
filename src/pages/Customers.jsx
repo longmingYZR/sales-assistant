@@ -61,6 +61,11 @@ export default function Customers() {
     setSearchParams(params, { replace: true });
   }, [stageFilter, countryFilter, priorityFilter, checkpointFilter]);
 
+  function getQualScore(c) {
+    return (c.qualBudget ? 1 : 0) + (c.qualAuthority ? 1 : 0)
+         + (c.qualNeed ? 1 : 0) + (c.qualTimeline ? 1 : 0);
+  }
+
   const loadData = async () => {
     const now = Date.now();
     const DAY = 24 * 60 * 60 * 1000;
@@ -70,6 +75,9 @@ export default function Customers() {
       const pa = a.priority === '重点' ? 1 : 0;
       const pb = b.priority === '重点' ? 1 : 0;
       if (pa !== pb) return pb - pa;
+      const qa = getQualScore(a);
+      const qb = getQualScore(b);
+      if (qa !== qb) return qb - qa;
       return b.updatedAt - a.updatedAt;
     });
     setCustomers(list);
@@ -390,6 +398,12 @@ export default function Customers() {
                     <span>{c.contactName}</span>
                     <span>{c.country}</span>
                     {c.opportunityId && <span className="card-opp-id">{c.opportunityId}</span>}
+                    {(() => {
+                      const qs = getQualScore(c);
+                      const label = qs === 4 ? 'BANT✓' : qs > 0 ? `BANT ${qs}/4` : 'BANT✗';
+                      const color = qs === 4 ? 'var(--success)' : qs > 0 ? 'var(--warning)' : 'var(--danger)';
+                      return <span style={{ fontSize: 10, color, fontWeight: 600 }}>{label}</span>;
+                    })()}
                   </div>
                   {c.needs && <p className="card-needs">{c.needs}</p>}
                   {c.amount > 0 && <p className="card-amount">$ {c.amount.toLocaleString()}</p>}
@@ -488,6 +502,12 @@ export default function Customers() {
                           <span>{c.contactName}</span>
                           <span>{c.country}</span>
                           {c.opportunityId && <span className="card-opp-id">{c.opportunityId}</span>}
+                          {(() => {
+                            const qs = getQualScore(c);
+                            const label = qs === 4 ? 'BANT✓' : qs > 0 ? `BANT ${qs}/4` : 'BANT✗';
+                            const color = qs === 4 ? 'var(--success)' : qs > 0 ? 'var(--warning)' : 'var(--danger)';
+                            return <span style={{ fontSize: 10, color, fontWeight: 600 }}>{label}</span>;
+                          })()}
                         </div>
                         {c.amount > 0 && <p className="card-amount">$ {c.amount.toLocaleString()}</p>}
                         {lastFollowUpMap[c.id] && (
