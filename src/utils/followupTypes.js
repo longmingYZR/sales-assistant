@@ -6,16 +6,17 @@ export const FOLLOWUP_TYPES = {
   negotiation: { label: '谈判推进',   defaultInterval: 7,  urgency: 'medium' },
   maintain:    { label: '日常维护',   defaultInterval: 15, urgency: 'low' },
   other:       { label: '其他',       defaultInterval: 7,  urgency: 'low' },
+  checkpoint:  { label: '点检',       defaultInterval: 7,  urgency: 'low' },
 };
 
 export const STAGE_FOLLOWUP_TYPES = {
-  '初接触': ['visit', 'feedback', 'other'],
-  '需求确认': ['visit', 'quotation', 'feedback', 'other'],
-  '报价中': ['quotation', 'feedback', 'negotiation', 'other'],
-  '谈判中': ['negotiation', 'payment', 'feedback', 'other'],
-  '成交': ['payment', 'maintain', 'other'],
-  '搁置': ['maintain', 'other'],
-  '商机关闭': ['maintain', 'other'],
+  '初接触': ['visit', 'feedback', 'other', 'checkpoint'],
+  '需求确认': ['visit', 'quotation', 'feedback', 'other', 'checkpoint'],
+  '报价中': ['quotation', 'feedback', 'negotiation', 'other', 'checkpoint'],
+  '谈判中': ['negotiation', 'payment', 'feedback', 'other', 'checkpoint'],
+  '成交': ['payment', 'maintain', 'other', 'checkpoint'],
+  '搁置': ['maintain', 'other', 'checkpoint'],
+  '商机关闭': ['maintain', 'other', 'checkpoint'],
 };
 
 // Type → dashboard category
@@ -27,6 +28,7 @@ const TYPE_CATEGORY = {
   negotiation: 'progressing',
   maintain:    'routine',
   other:       'routine',
+  checkpoint:  'routine',
 };
 
 export const CATEGORY_CONFIG = {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllCustomers, getAllFollowUps, getLastFollowUp, getDeletedCustomers, restoreCustomer, addReviewSession, updateCustomer } from '../db';
+import { getAllCustomers, getAllFollowUps, getLastFollowUp, getDeletedCustomers, restoreCustomer, addReviewSession, updateCustomer, addFollowUp } from '../db';
 import { detectZombieCustomers } from '../utils/analysis';
 import { getIntervalDays, FOLLOWUP_TYPES } from '../utils/followupTypes';
 import { hasProductPricing } from '../utils/countryPricing';
@@ -172,6 +172,14 @@ export default function Customers() {
       await updateCustomer(customerId, {
         lastCheckpointAt: now,
         lastCheckpointNote: reviewNotes[customerId] || '',
+      });
+      // 写一条跟进记录，让点检出现在跟进时间线里
+      const note = reviewNotes[customerId] || '';
+      await addFollowUp({
+        customerId,
+        date: now,
+        type: 'checkpoint',
+        content: note ? `${title}\n${note}` : title,
       });
     }
 

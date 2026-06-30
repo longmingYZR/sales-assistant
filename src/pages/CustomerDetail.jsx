@@ -445,23 +445,6 @@ export default function CustomerDetail() {
             rows={3}
           />
 
-          {form.lastCheckpointAt && (
-            <div style={{
-              marginTop: 8, padding: '8px 10px',
-              background: 'rgba(74, 158, 255, 0.06)',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--text-muted)',
-            }}>
-              📋 上次点检：{new Date(form.lastCheckpointAt).toLocaleDateString('zh-CN', {
-                month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-              })}
-              {form.lastCheckpointNote && (
-                <span style={{ color: 'var(--text-primary)', marginLeft: 4 }}>— {form.lastCheckpointNote}</span>
-              )}
-            </div>
-          )}
-
           <button
             className="btn btn-primary btn-full"
             onClick={handleSave}
