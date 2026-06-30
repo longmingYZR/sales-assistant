@@ -281,10 +281,17 @@ body {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.filters .input {
+  flex: 1 1 100%;
+  min-width: 0;
 }
 
 .filters .select {
-  flex: 1;
+  flex: 1 1 calc(50% - 4px);
+  min-width: 0;
 }
 
 /* === Customer List === */
