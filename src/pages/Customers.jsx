@@ -36,6 +36,7 @@ export default function Customers() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [reviewNotes, setReviewNotes] = useState({});
   const [savingCheckpoint, setSavingCheckpoint] = useState(false);
+  const [savingCustomerId, setSavingCustomerId] = useState(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -179,55 +180,70 @@ export default function Customers() {
   }
 
   async function saveSingleCheckpoint(customerId) {
-    const now = Date.now();
-    const note = reviewNotes[customerId] || '';
-    const title = `${now.getMonth() + 1}月${now.getDate()}日点检 (1个)`;
+    setSavingCustomerId(customerId);
+    try {
+      const now = Date.now();
+      const today = new Date();
+      const note = reviewNotes[customerId] || '';
+      const title = `${today.getMonth() + 1}月${today.getDate()}日点检 (1个)`;
 
-    await addReviewSession({ title, customerIds: [customerId], notes: { [customerId]: note } });
-    await updateCustomer(customerId, { lastCheckpointAt: now, lastCheckpointNote: note });
-    await addFollowUp({
-      customerId, date: now, type: 'checkpoint',
-      content: note ? `${title}\n${note}` : title,
-    });
+      await addReviewSession({ title, customerIds: [customerId], notes: { [customerId]: note } });
+      await updateCustomer(customerId, { lastCheckpointAt: now, lastCheckpointNote: note });
+      await addFollowUp({
+        customerId, date: now, type: 'checkpoint',
+        content: note ? `${title}\n${note}` : title,
+      });
 
-    setSelectedIds((prev) => { const next = new Set(prev); next.delete(customerId); return next; });
-    setReviewNotes((prev) => { const c = { ...prev }; delete c[customerId]; return c; });
-    await loadData();
+      setSelectedIds((prev) => { const next = new Set(prev); next.delete(customerId); return next; });
+      setReviewNotes((prev) => { const c = { ...prev }; delete c[customerId]; return c; });
+      await loadData();
+    } catch (err) {
+      console.error('saveSingleCheckpoint failed:', err);
+      alert(`保存点检失败：${err.message || '未知错误'}`);
+    } finally {
+      setSavingCustomerId(null);
+    }
   }
 
   async function saveCheckpoint() {
     if (selectedIds.size === 0) return;
     setSavingCheckpoint(true);
-    const title = generateCheckpointTitle();
-    const now = Date.now();
-    const customerIds = Array.from(selectedIds);
+    try {
+      const title = generateCheckpointTitle();
+      const now = Date.now();
+      const customerIds = Array.from(selectedIds);
 
-    await addReviewSession({
-      title,
-      customerIds,
-      notes: reviewNotes,
-    });
+      await addReviewSession({
+        title,
+        customerIds,
+        notes: reviewNotes,
+      });
 
-    for (const customerId of customerIds) {
-      await updateCustomer(customerId, {
-        lastCheckpointAt: now,
-        lastCheckpointNote: reviewNotes[customerId] || '',
-      });
-      // 写一条跟进记录，让点检出现在跟进时间线里
-      const note = reviewNotes[customerId] || '';
-      await addFollowUp({
-        customerId,
-        date: now,
-        type: 'checkpoint',
-        content: note ? `${title}\n${note}` : title,
-      });
+      for (const customerId of customerIds) {
+        await updateCustomer(customerId, {
+          lastCheckpointAt: now,
+          lastCheckpointNote: reviewNotes[customerId] || '',
+        });
+        // 写一条跟进记录，让点检出现在跟进时间线里
+        const note = reviewNotes[customerId] || '';
+        await addFollowUp({
+          customerId,
+          date: now,
+          type: 'checkpoint',
+          content: note ? `${title}\n${note}` : title,
+        });
+      }
+
+      setSelectedIds(new Set());
+      setReviewNotes({});
+      setReviewMode(false);
+      await loadData();
+    } catch (err) {
+      console.error('saveCheckpoint failed:', err);
+      alert(`保存点检失败：${err.message || '未知错误'}`);
+    } finally {
+      setSavingCheckpoint(false);
     }
-
-    setSelectedIds(new Set());
-    setReviewNotes({});
-    setReviewMode(false);
-    setSavingCheckpoint(false);
-    await loadData();
   }
 
   const handleRestore = async (id, e) => {
@@ -471,9 +487,10 @@ export default function Customers() {
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={(e) => { e.stopPropagation(); saveSingleCheckpoint(c.id); }}
+                        disabled={savingCustomerId === c.id}
                         style={{ marginTop: 4 }}
                       >
-                        保存点检
+                        {savingCustomerId === c.id ? '保存中...' : '保存点检'}
                       </button>
                     </div>
                   )}
