@@ -28,6 +28,8 @@ export default function Settings() {
     Number(localStorage.getItem('closedReviewDays')) || 30
   );
   const [saved, setSaved] = useState(false);
+  const [gaodeKey, setGaodeKey] = useState('');
+  const [gaodeKeySaved, setGaodeKeySaved] = useState(false);
   const [showIntervals, setShowIntervals] = useState(false);
   const [showSync, setShowSync] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -52,6 +54,7 @@ export default function Settings() {
   useEffect(() => {
     setApiKey(localStorage.getItem('aiApiKey') || '');
     setProvider(localStorage.getItem('aiProvider') || 'claude');
+    setGaodeKey(localStorage.getItem('sales_map_gaode_key_v1') || '');
     const stored = JSON.parse(localStorage.getItem('followupIntervals') || '{}');
     const initial = {};
     for (const typeId of Object.keys(FOLLOWUP_TYPES)) {
@@ -102,6 +105,12 @@ export default function Settings() {
     localStorage.setItem('aiApiKey', apiKey.trim());
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const saveGaodeKey = () => {
+    localStorage.setItem('sales_map_gaode_key_v1', gaodeKey.trim());
+    setGaodeKeySaved(true);
+    setTimeout(() => setGaodeKeySaved(false), 2000);
   };
 
   const saveProvider = (val) => {
@@ -240,6 +249,22 @@ export default function Settings() {
         </div>
         {saved && <p className="hint success">已保存</p>}
         <p className="hint">API Key 仅存储在本地浏览器，不会上传到任何服务器</p>
+      </section>
+
+      <section className="settings-section">
+        <h3>高德地图 API Key</h3>
+        <div className="input-row">
+          <input
+            type="password"
+            className="input"
+            value={gaodeKey}
+            onChange={(e) => setGaodeKey(e.target.value)}
+            onBlur={saveGaodeKey}
+            placeholder="输入高德 Web服务 Key"
+          />
+        </div>
+        {gaodeKeySaved && <p className="hint success">已保存</p>}
+        <p className="hint">用于地址地理编码（地图页面）。申请地址：https://lbs.amap.com/</p>
       </section>
 
       <section className="settings-section">

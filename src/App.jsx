@@ -9,6 +9,7 @@ import ProductChat from './pages/ProductChat';
 import Checkpoints from './pages/Checkpoints';
 import RequirementChat from './pages/RequirementChat';
 import ConversationList from './pages/ConversationList';
+import Map from './pages/Map';
 import Settings from './pages/Settings';
 import { getSyncConfig, isAutoSyncEnabled, syncAll } from './utils/sync';
 import './App.css';
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/assistant" element={<ConversationList />} />
           <Route path="/assistant/:id" element={<RequirementChat />} />
           <Route path="/checkpoints" element={<Checkpoints />} />
+          <Route path="/map" element={<Map />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
